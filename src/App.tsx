@@ -8,6 +8,7 @@ import Data from "./pages/employees/Data";
 import HiringResume from "./pages/Hiring/HiringResume";
 import Increment from "./pages/Increment/Increment";
 import Salary from "./pages/Salary/Salary";
+import Letters from "./pages/Letters/Letters";
 
 
 export default function App() {
@@ -29,6 +30,9 @@ export default function App() {
           
           {/* Salary Page */}
           <Route path="/salary" element={<AdminProtect><Salary /></AdminProtect>} />
+          
+          {/* Letters Page */}
+          <Route path="/letters" element={<AdminProtect><Letters /></AdminProtect>} />
 
           {/* Fallback Route */}
           <Route path="*" element={<AdminProtect><Ecommerce /></AdminProtect>} />

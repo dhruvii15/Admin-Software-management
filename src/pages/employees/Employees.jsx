@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
 import { Button } from "react-bootstrap";
 import { toast, ToastContainer } from 'react-toastify';
@@ -214,16 +213,6 @@ const Employees = () => {
                 setIsSubmitting(false);
             }
         }
-    };
-
-    const handleCopyToClipboard = (text) => {
-        navigator.clipboard.writeText(text)
-            .then(() => {
-                toast.success("Copied to clipboard!");
-            })
-            .catch(() => {
-                toast.error("Failed to copy!");
-            });
     };
 
     if (loading) return (

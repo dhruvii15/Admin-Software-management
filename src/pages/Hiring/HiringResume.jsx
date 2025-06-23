@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import jsPDF from 'jspdf';
@@ -23,7 +23,6 @@ const HiringResume = () => {
     const [selectedPosition, setSelectedPosition] = useState(null);
     const [showPositionInput, setShowPositionInput] = useState(false);
     const [selectedFileName, setSelectedFileName] = useState('');
-    const [previewUrl, setPreviewUrl] = useState('');
     const [isDragging, setIsDragging] = useState(false);
     const [showTable, setShowTable] = useState(false);
     const dropdownRef = useRef(null);
@@ -79,7 +78,6 @@ const HiringResume = () => {
                 });
                 setId(undefined);
                 setSelectedFileName('');
-                setPreviewUrl('');
                 setShowPositionInput(false);
             }
             setErrors({});
@@ -136,10 +134,120 @@ const HiringResume = () => {
         return color;
     };
 
+    
+
+    // date fillter 
+    const getDateFilterOptions = useCallback(() => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
+
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(today.getDate() - today.getDay());
+    const thisWeekEnd = new Date(thisWeekStart);
+    thisWeekEnd.setDate(thisWeekStart.getDate() + 6); // End of current week
+
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setDate(thisWeekStart.getDate() - 1);
+
+    return {
+        today: { start: today, end: today },
+        tomorrow: { start: tomorrow, end: tomorrow },
+        yesterday: { start: yesterday, end: yesterday },
+        thisWeek: { start: thisWeekStart, end: thisWeekEnd },
+        lastWeek: { start: lastWeekStart, end: lastWeekEnd },
+        thisMonth: { start: thisMonthStart, end: thisMonthEnd },
+        lastMonth: { start: lastMonthStart, end: lastMonthEnd }
+    };
+}, []);
+
+    // Add this function to filter data by date
+    const filterDataByDate = useCallback((data, filterType, customRange = null) => {
+    if (filterType === 'all') return data;
+
+    const options = getDateFilterOptions();
+    let dateRange;
+
+    if (filterType === 'custom' && customRange) {
+        dateRange = {
+            start: new Date(customRange.start),
+            end: new Date(customRange.end)
+        };
+    } else {
+        dateRange = options[filterType];
+    }
+
+    if (!dateRange) return data;
+
+    return data.filter(item => {
+        const itemDate = new Date(item.interviewdate);
+        const startDate = new Date(dateRange.start);
+        const endDate = new Date(dateRange.end);
+
+        // Set time to full day range
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        return itemDate >= startDate && itemDate <= endDate;
+    });
+}, [getDateFilterOptions]);
+    
+
+    // Update your getData function to store original data
+    const getData = useCallback(async (page = 1) => {
+    try {
+        setLoading(true);
+        const response = await axios.get('http://localhost:5005/api/hiring/read');
+        const data = response.data.data;
+
+        // Store original data
+        setOriginalData(data);
+
+        // Apply current date filter
+        const filteredData = filterDataByDate(data, dateFilter, customDateRange);
+        setFilteredData(filteredData);
+
+        // Extract unique positions for dropdown
+        const uniquePositions = [...new Set(data.map(item => item.position).filter(Boolean))];
+        setPositions(uniquePositions);
+
+        // Create position statistics from filtered data
+        const positionCounts = filteredData.reduce((acc, item) => {
+            if (item.position) {
+                acc[item.position] = (acc[item.position] || 0) + 1;
+            }
+            return acc;
+        }, {});
+
+        const positionStatsArray = Object.entries(positionCounts).map(([position, count]) => ({
+            position,
+            count,
+            color: getFixedColor(position)
+        }));
+        setPositionStats(positionStatsArray);
+    } catch (err) {
+        console.error(err);
+        toast.error("Failed to fetch hiring data.");
+    } finally {
+        setLoading(false);
+    }
+}, [dateFilter, customDateRange, filterDataByDate]);
+
 
     useEffect(() => {
         getData();
-    }, []);
+    }, [getData]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -206,13 +314,6 @@ const HiringResume = () => {
             setSelectedFileName(file.name);
             setFormData(prev => ({ ...prev, resume: file }));
 
-            // Create preview for supported file types
-            if (file.type === 'application/pdf') {
-                const fileURL = URL.createObjectURL(file);
-                setPreviewUrl(fileURL);
-            } else {
-                setPreviewUrl('');
-            }
 
             // Clear error
             if (errors.resume) {
@@ -258,14 +359,6 @@ const HiringResume = () => {
 
             setSelectedFileName(file.name);
             setFormData(prev => ({ ...prev, resume: file }));
-
-            // Create preview for PDF
-            if (file.type === 'application/pdf') {
-                const fileURL = URL.createObjectURL(file);
-                setPreviewUrl(fileURL);
-            } else {
-                setPreviewUrl('');
-            }
 
             // Clear error
             if (errors.resume) {
@@ -364,7 +457,6 @@ const HiringResume = () => {
         setErrors({});
         setVisible(false);
         setSelectedFileName('');
-        setPreviewUrl('');
         setShowPositionInput(false);
     };
 
@@ -460,113 +552,6 @@ const HiringResume = () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [showSuggestions]);
-
-    // date fillter 
-    const getDateFilterOptions = () => {
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
-
-        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-
-        const thisWeekStart = new Date(today);
-        thisWeekStart.setDate(today.getDate() - today.getDay());
-        const thisWeekEnd = new Date(thisWeekStart);
-        thisWeekEnd.setDate(thisWeekStart.getDate() + 6); // End of current week
-
-        const lastWeekStart = new Date(thisWeekStart);
-        lastWeekStart.setDate(thisWeekStart.getDate() - 7);
-        const lastWeekEnd = new Date(thisWeekStart);
-        lastWeekEnd.setDate(thisWeekStart.getDate() - 1);
-
-        return {
-            today: { start: today, end: today },
-            tomorrow: { start: tomorrow, end: tomorrow },
-            yesterday: { start: yesterday, end: yesterday },
-            thisWeek: { start: thisWeekStart, end: thisWeekEnd },
-            lastWeek: { start: lastWeekStart, end: lastWeekEnd },
-            thisMonth: { start: thisMonthStart, end: thisMonthEnd },
-            lastMonth: { start: lastMonthStart, end: lastMonthEnd }
-        };
-    };
-
-    // Add this function to filter data by date
-    const filterDataByDate = (data, filterType, customRange = null) => {
-        if (filterType === 'all') return data;
-
-        const options = getDateFilterOptions();
-        let dateRange;
-
-        if (filterType === 'custom' && customRange) {
-            dateRange = {
-                start: new Date(customRange.start),
-                end: new Date(customRange.end)
-            };
-        } else {
-            dateRange = options[filterType];
-        }
-
-        if (!dateRange) return data;
-
-        return data.filter(item => {
-            const itemDate = new Date(item.interviewdate);
-            const startDate = new Date(dateRange.start);
-            const endDate = new Date(dateRange.end);
-
-            // Set time to start and end of day for proper comparison
-            startDate.setHours(0, 0, 0, 0);
-            endDate.setHours(23, 59, 59, 999);
-
-            return itemDate >= startDate && itemDate <= endDate;
-        });
-    };
-
-    // Update your getData function to store original data
-    const getData = async (page = 1) => {
-        try {
-            setLoading(true);
-            const response = await axios.get('http://localhost:5005/api/hiring/read');
-            const data = response.data.data;
-
-            // Store original data
-            setOriginalData(data);
-
-            // Apply current date filter
-            const filteredData = filterDataByDate(data, dateFilter, customDateRange);
-            setFilteredData(filteredData);
-
-            // Extract unique positions for dropdown
-            const uniquePositions = [...new Set(data.map(item => item.position).filter(Boolean))];
-            setPositions(uniquePositions);
-
-            // Create position statistics from filtered data
-            const positionCounts = filteredData.reduce((acc, item) => {
-                if (item.position) {
-                    acc[item.position] = (acc[item.position] || 0) + 1;
-                }
-                return acc;
-            }, {});
-
-            const positionStatsArray = Object.entries(positionCounts).map(([position, count]) => ({
-                position,
-                count,
-                color: getFixedColor(position)
-            }));
-            setPositionStats(positionStatsArray);
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to fetch hiring data.");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     // Add date filter change handler
     const handleDateFilterChange = (filterType) => {
