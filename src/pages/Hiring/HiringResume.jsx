@@ -208,7 +208,7 @@ const HiringResume = () => {
     const getData = useCallback(async (page = 1) => {
     try {
         setLoading(true);
-        const response = await axios.get('http://localhost:5005/api/hiring/read');
+        const response = await axios.get('https://backend-software-management.onrender.com/api/hiring/read');
         const data = response.data.data;
 
         // Store original data
@@ -422,8 +422,8 @@ const HiringResume = () => {
             }
 
             const endpoint = id
-                ? `http://localhost:5005/api/hiring/update/${id}`
-                : 'http://localhost:5005/api/hiring/create';
+                ? `https://backend-software-management.onrender.com/api/hiring/update/${id}`
+                : 'https://backend-software-management.onrender.com/api/hiring/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, submitData, {
@@ -487,7 +487,7 @@ const HiringResume = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this hiring record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`http://localhost:5005/api/hiring/delete/${id}`);
+                const response = await axios.delete(`https://backend-software-management.onrender.com/api/hiring/delete/${id}`);
                 toast.success(response.data.message || 'Hiring record deleted successfully!');
                 getData();
             } catch (err) {
@@ -1105,7 +1105,7 @@ const HiringResume = () => {
                                                             <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                                 {item.resume ? (
                                                                     <button
-                                                                        onClick={() => window.open(`http://localhost:5005/images/hiringresume/${item.resume}`, '_blank')}
+                                                                        onClick={() => window.open(`https://backend-software-management.onrender.com/images/hiringresume/${item.resume}`, '_blank')}
                                                                         className="text-[#0777AB] transform transition-all duration-200 hover:scale-110"
                                                                     >
                                                                         <FontAwesomeIcon icon={faEye} className="text-lg" />

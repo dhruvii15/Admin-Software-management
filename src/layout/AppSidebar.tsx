@@ -11,7 +11,7 @@ import {
 
 import logo from "../assest/logo.svg"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPerson, faUser, faChartLine, faWallet } from '@fortawesome/free-solid-svg-icons';
+import { faPerson, faUser, faChartLine, faWallet, faFileSignature } from '@fortawesome/free-solid-svg-icons';
 
 type NavItem = {
   name: string;
@@ -47,7 +47,7 @@ const navItems: NavItem[] = [
     path: "/salary",
   },
   {
-    icon: <FontAwesomeIcon icon={faWallet} />,
+    icon: <FontAwesomeIcon icon={faFileSignature} />,
     name: "Letters",
     path: "/letters",
   }

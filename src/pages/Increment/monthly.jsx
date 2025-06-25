@@ -41,7 +41,7 @@ const Monthly = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await fetch("http://localhost:5005/api/evaluations/read");
+            const response = await fetch("https://backend-software-management.onrender.com/api/evaluations/read");
             const data = await response.json();
             if (data) {
                 setEvaluations(data.data);

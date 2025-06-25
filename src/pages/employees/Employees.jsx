@@ -72,7 +72,7 @@ const Employees = () => {
         try {
             setLoading(true);
             // Replace with your employee API endpoint
-            const response = await axios.get('http://localhost:5005/api/employee/read');
+            const response = await axios.get('https://backend-software-management.onrender.com/api/employee/read');
             setFilteredData(response.data.data);
         } catch (err) {
             console.error(err);
@@ -146,8 +146,8 @@ const Employees = () => {
             setIsSubmitting(true);
             // Replace with your employee API endpoints
             const endpoint = id
-                ? `http://localhost:5005/api/employee/update/${id}`
-                : 'http://localhost:5005/api/employee/create';
+                ? `https://backend-software-management.onrender.com/api/employee/update/${id}`
+                : 'https://backend-software-management.onrender.com/api/employee/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formData);
@@ -203,7 +203,7 @@ const Employees = () => {
             try {
                 setIsSubmitting(true);
                 // Replace with your employee API endpoint
-                const response = await axios.delete(`http://localhost:5005/api/employee/delete/${id}`);
+                const response = await axios.delete(`https://backend-software-management.onrender.com/api/employee/delete/${id}`);
                 toast.success(response.data.message);
                 getData();
             } catch (err) {

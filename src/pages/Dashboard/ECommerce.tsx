@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { faTriangleExclamation, faXmark, faCircleCheck, faClock } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import Dashboard from './Dashboard';
 
 interface Evaluation {
   _id: string;
@@ -21,7 +22,7 @@ interface EvaluationData {
 export default function Ecommerce() {
   const [showPopup, setShowPopup] = useState(false);
   const [evaluationData, setEvaluationData] = useState<EvaluationData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  // const [loading, setLoading] = useState<boolean>(true);
 
   // console.log(evaluationData);
 
@@ -31,8 +32,16 @@ export default function Ecommerce() {
 
   const checkMonthlyEvaluations = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('http://localhost:5005/api/evaluations/read');
+      
+      // Check if popup has already been shown this session
+      const popupShownKey = 'evaluationPopupShown';
+      const hasPopupBeenShown = sessionStorage.getItem(popupShownKey);
+      
+      if (hasPopupBeenShown) {
+        return;
+      }
+
+      const response = await fetch('https://backend-software-management.onrender.com/api/evaluations/read');
       const data = await response.json();
 
       const currentDate = new Date();
@@ -61,13 +70,14 @@ export default function Ecommerce() {
             year: previousYear,
           });
           setShowPopup(true);
+          
+          // Mark popup as shown for this session
+          sessionStorage.setItem(popupShownKey, 'true');
         }
       }
     } catch (error) {
       console.error('Error checking evaluations:', error);
-    } finally {
-      setLoading(false);
-    }
+    } 
   };
 
   const getMonthName = (monthIndex: number): string => {
@@ -93,6 +103,9 @@ export default function Ecommerce() {
 
   return (
     <>
+
+      <Dashboard />
+
       {showPopup && evaluationData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-99999 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all duration-300 scale-100 ">

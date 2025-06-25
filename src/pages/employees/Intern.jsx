@@ -68,7 +68,7 @@ const Intern = () => {
         try {
             setLoading(true);
             // Replace with your intern API endpoint
-            const response = await axios.get('http://localhost:5005/api/employee/intern/read');
+            const response = await axios.get('https://backend-software-management.onrender.com/api/employee/intern/read');
             setFilteredData(response.data.data);
         } catch (err) {
             console.error(err);
@@ -141,8 +141,8 @@ const Intern = () => {
             setIsSubmitting(true);
             // Replace with your intern API endpoints
             const endpoint = id
-                ? `http://localhost:5005/api/employee/intern/update/${id}`
-                : 'http://localhost:5005/api/employee/intern/create';
+                ? `https://backend-software-management.onrender.com/api/employee/intern/update/${id}`
+                : 'https://backend-software-management.onrender.com/api/employee/intern/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formData);
@@ -194,7 +194,7 @@ const Intern = () => {
             try {
                 setIsSubmitting(true);
                 // Replace with your intern API endpoint
-                const response = await axios.delete(`http://localhost:5005/api/employee/intern/delete/${id}`);
+                const response = await axios.delete(`https://backend-software-management.onrender.com/api/employee/intern/delete/${id}`);
                 toast.success(response.data.message || 'Intern deleted successfully!');
                 getData();
             } catch (err) {
