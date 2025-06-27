@@ -14,7 +14,9 @@ import "jspdf-autotable";
 const Letters = () => {
     const [selectedLetter, setSelectedLetter] = useState(null);
     const [showModal, setShowModal] = useState(false);
-    const [formData, setFormData] = useState({}); const [errors, setErrors] = useState({});
+    const [formData, setFormData] = useState({});
+    const [errors, setErrors] = useState({});
+    const [formattedData, setFormattedData] = useState({});
 
     // Add this validation function
     const validateForm = () => {
@@ -41,7 +43,16 @@ const Letters = () => {
             fields: [
                 { name: 'employeeName', label: 'Employee Name', type: 'text', required: true },
                 { name: 'designation', label: 'Designation', type: 'text', required: true },
-                { name: 'period', label: 'Period', type: 'text', required: true },
+                {
+                    name: 'period',
+                    label: 'Period',
+                    type: 'select',
+                    required: true,
+                    options: [
+                        { label: 'Probation', value: 'Probation Period' },
+                        { label: 'Training', value: 'Training Period' }
+                    ]
+                },
                 { name: 'periodstartDate', label: 'Period Start Date', type: 'date', required: true },
                 { name: 'periodendDate', label: 'Period End Date', type: 'date', required: true },
                 { name: 'workstartDate', label: 'Work Start Date', type: 'date', required: true },
@@ -55,7 +66,7 @@ const Letters = () => {
             icon: <FontAwesomeIcon icon={faFileSignature} className="w-5 h-5 text-white" />,
             color: 'bg-purple-600',
             fields: [
-                { name: 'employeeName', label: 'Intern Name', type: 'text', required: true },
+                { name: 'employeeName', label: 'Employee Name', type: 'text', required: true },
                 { name: 'designation', label: 'Designation', type: 'text', required: true },
                 { name: 'salary', label: 'Salary', type: 'text', required: true },
                 { name: 'startdate', label: 'Join Date', type: 'date', required: true },
@@ -98,12 +109,6 @@ const Letters = () => {
         setShowModal(true);
     };
 
-    const handleInputChange = (fieldName, value) => {
-        setFormData(prev => ({
-            ...prev,
-            [fieldName]: value
-        }));
-    };
 
     const getBase64FromUrl = async (url) => {
         const response = await fetch(url);
@@ -138,8 +143,14 @@ const Letters = () => {
             periodstartDate,
             periodendDate,
             workstartDate,
-            workendDate
+            workendDate,
+            companyname = "Plexus Technology Surat, Gujarat"
         } = formData;
+
+        const formattedperiodstartDate = formatDate(periodstartDate);
+        const formattedperiodendDate = formatDate(periodendDate);
+        const formattedworkstartDate = formatDate(workstartDate);
+        const formattedworkendDate = formatDate(workendDate);
 
         const doc = new jsPDF({
             orientation: "portrait",
@@ -165,15 +176,17 @@ const Letters = () => {
 
             doc.setFontSize(14);
             doc.setFont("MyriadPro", "normal");
-            doc.text(`${new Date().toLocaleDateString()}`, 188, 39.5, { align: "center" });
+            doc.text(`${formatDate(new Date())}`, 189, 36.5, { align: "center" });
 
             doc.setFontSize(12);
             let y = 80;
 
             // Subject - Bold
-            doc.setFontSize(14);
+            doc.setFontSize(15);
             doc.setFont("MyriadPro", "bold");
-            doc.text(`Subject: Experience Of ${designation} at Plexus Technology.`, 18, y);
+            doc.text(`Subject: `, 18, y);
+            doc.setFont("MyriadPro", "normal");
+            doc.text(`Experience Of ${designation} at Plexus Technology.`, 38, y);
             y += 15;
 
             doc.setFontSize(14);
@@ -185,41 +198,61 @@ const Letters = () => {
             doc.setFont("MyriadPro", "normal");
 
             // Create the complete paragraph text
-            const paragraph1 = `This is to Certify that ${employeeName} was working with Plexus Technology Surat, Gujarat India as ${designation} from ${periodstartDate} to ${periodendDate} as a ${period} Period and ${workstartDate} to ${workendDate} as a Full-time Employee per the personnel roles and company's employment record.`;
+            const paragraph1 = `This is to Certify that ${employeeName} was working with ${companyname} India as ${designation} from ${formattedperiodstartDate} to ${formattedperiodendDate} as a ${period} and ${formattedworkstartDate} to ${formattedworkendDate} as a Full-time Employee per the personnel roles and company's employment record.`;
 
-            // Split text to fit within page width (170mm width to leave margins)
+            // Split text for width
             const splitParagraph1 = doc.splitTextToSize(paragraph1, 170);
 
-            // Process each line to apply bold formatting to specific words
+            // Bold phrases to check
+            const boldPhrases = [employeeName, companyname, designation, formattedperiodstartDate, formattedperiodendDate, period, formattedworkstartDate, formattedworkendDate, "Full-time Employee"];
+
             splitParagraph1.forEach(line => {
                 let currentX = 18;
+                let remainingLine = line;
 
-                // Split the line into words to check for bold formatting
-                const words = line.split(' ');
-                const boldWords = [employeeName, designation, periodstartDate, periodendDate, period, workstartDate, workendDate];
+                while (remainingLine.length > 0) {
+                    // Find which bold phrase comes first in the line
+                    let firstBoldIndex = -1;
+                    let foundBold = '';
 
-                for (let i = 0; i < words.length; i++) {
-                    const word = words[i];
-                    const isLastWord = i === words.length - 1;
-                    const wordWithSpace = isLastWord ? word : word + ' ';
+                    boldPhrases.forEach(phrase => {
+                        const index = remainingLine.indexOf(phrase);
+                        if (index !== -1 && (firstBoldIndex === -1 || index < firstBoldIndex)) {
+                            firstBoldIndex = index;
+                            foundBold = phrase;
+                        }
+                    });
 
-                    // Check if this word should be bold
-                    const shouldBeBold = boldWords.some(boldWord => word.includes(boldWord.replace(/,/g, '')));
-
-                    if (shouldBeBold) {
-                        doc.setFont("MyriadPro", "bold");
-                    } else {
+                    if (firstBoldIndex === -1) {
+                        // No bold phrase found, print remaining normal text
                         doc.setFont("MyriadPro", "normal");
-                    }
+                        doc.text(remainingLine, currentX, y);
+                        currentX += doc.getTextWidth(remainingLine);
+                        remainingLine = '';
+                    } else {
+                        // Print normal text before bold phrase
+                        const normalText = remainingLine.substring(0, firstBoldIndex);
+                        if (normalText) {
+                            doc.setFont("MyriadPro", "normal");
+                            doc.text(normalText, currentX, y);
+                            currentX += doc.getTextWidth(normalText);
+                        }
 
-                    doc.text(wordWithSpace, currentX, y);
-                    currentX += doc.getTextWidth(wordWithSpace);
+                        // Print bold phrase
+                        doc.setFont("MyriadPro", "bold");
+                        doc.text(foundBold, currentX, y);
+                        currentX += doc.getTextWidth(foundBold);
+
+                        // Update remaining line
+                        remainingLine = remainingLine.substring(firstBoldIndex + foundBold.length);
+                    }
                 }
 
-                y += 7; // Move to next line
+                y += 7; // Next line
             });
 
-            y += 5; // Add some space after paragraph 1
+            y += 5; // Space after paragraph
+
 
             // ----- Paragraph 2 -----
             doc.setFont("MyriadPro", "normal");
@@ -290,6 +323,7 @@ const Letters = () => {
             format: "a4"
         });
 
+        const formattedstartdate = formatDate(startdate);
         try {
             // Add Myriad Pro font
             const fontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-REGULAR.ttf`);
@@ -308,7 +342,7 @@ const Letters = () => {
 
             doc.setFontSize(14);
             doc.setFont("MyriadPro", "normal");
-            doc.text(`${new Date().toLocaleDateString()}`, 188, 39.5, { align: "center" });
+            doc.text(`${formatDate(new Date())}`, 188, 36.5, { align: "center" });
 
             doc.setFontSize(12);
             let y = 100;
@@ -319,7 +353,7 @@ const Letters = () => {
             doc.text(`Dear , ${employeeName}`, 18, y);
             y += 10;
 
-            doc.setFontSize(14);
+            doc.setFontSize(13);
             doc.setFont("MyriadPro", "normal");
             doc.text(`${collegename},`, 18, y);
             y += 10;
@@ -328,7 +362,7 @@ const Letters = () => {
             doc.setFont("MyriadPro", "normal");
 
             // Create the complete paragraph text for internship
-            const paragraph1 = `In Reference to your application,we would like congratulate you on being selected for an internship with ${companyname} from ${city} . Your training is scheduled to start on ${startdate}. All of usat ${companyname} are excited that you will be joining our team.`;
+            const paragraph1 = `In Reference to your application,we would like congratulate you on being selected for an internship with ${companyname} from ${city} . Your training is scheduled to start on ${formattedstartdate}. All of us at ${companyname} are excited that you will be joining our team.`;
 
             // Split text to fit within page width (170mm width to leave margins)
             const splitParagraph1 = doc.splitTextToSize(paragraph1, 170);
@@ -339,7 +373,7 @@ const Letters = () => {
 
                 // Split the line into words to check for bold formatting
                 const words = line.split(' ');
-                const boldWords = [employeeName, companyname, city, startdate, collegename];
+                const boldWords = [employeeName, companyname, city, formattedstartdate, collegename];
 
                 for (let i = 0; i < words.length; i++) {
                     const word = words[i];
@@ -359,14 +393,14 @@ const Letters = () => {
                     currentX += doc.getTextWidth(wordWithSpace);
                 }
 
-                y += 7; // Move to next line
+                y += 8; // Move to next line
             });
 
             y += 5; // Add some space after paragraph 1
 
             // ----- Paragraph 2 (Modified for Internship) -----
             doc.setFont("MyriadPro", "normal");
-            const para2 = `In your internship, we will include training and focuson learning ${designation} and new skills and gaining a deeper understanding of concepts through hands-on Business analytics of the knowledge you learned Information about the project and technical platform will be shared with you before the commencement of your training Congratulations to you and wear eexcited to work with you.`;
+            const para2 = `In your internship, we will include training and focus on learning ${designation} and new skills and gaining a deeper understanding of concepts through hands-on ${designation} of the knowledge you learned Information about the project and technical platform will be shared with you before the commencement of your training Congratulations to you and we are excited to work with you.`;
 
             const splitPara2 = doc.splitTextToSize(para2, 170);
             let para2Y = y;
@@ -391,7 +425,7 @@ const Letters = () => {
                     doc.setFont("MyriadPro", "normal");
                     doc.text(line, 18, para2Y);
                 }
-                para2Y += 7;
+                para2Y += 8;
             });
             y = para2Y + 5;
 
@@ -417,6 +451,9 @@ const Letters = () => {
             format: "a4"
         });
 
+        const formattedstartdate = formatDate(startdate);
+        const formattedenddate = formatDate(enddate);
+
         try {
             // Add Myriad Pro font
             const fontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-REGULAR.ttf`);
@@ -435,7 +472,7 @@ const Letters = () => {
 
             doc.setFontSize(14);
             doc.setFont("MyriadPro", "normal");
-            doc.text(`${new Date().toLocaleDateString()}`, 188, 39.5, { align: "center" });
+            doc.text(`${formatDate(new Date())}`, 188, 36.5, { align: "center" });
 
             doc.setFontSize(12);
             let y = 100;
@@ -446,7 +483,7 @@ const Letters = () => {
             doc.text(`Dear , ${employeeName}`, 18, y);
             y += 10;
 
-            doc.setFontSize(14);
+            doc.setFontSize(13);
             doc.setFont("MyriadPro", "normal");
             doc.text(`${collegename},`, 18, y);
             y += 10;
@@ -455,7 +492,7 @@ const Letters = () => {
             doc.setFont("MyriadPro", "normal");
 
             // Create the complete paragraph text for internship
-            const paragraph1 = `This is to Certif that ${employeeName} has done Internship as a ${designation} we would like to Congratulate you on being Completed for an Internship with ${companyname} from Surat . Her training is scheduled on ${startdate} to ${enddate}.`;
+            const paragraph1 = `This is to Certify that ${employeeName} has done Internship as a ${designation} we would like to Congratulate you on being Completed for an Internship with ${companyname} from Surat . Her training is scheduled on ${formattedstartdate} to ${formattedenddate}.`;
 
             // Split text to fit within page width (170mm width to leave margins)
             const splitParagraph1 = doc.splitTextToSize(paragraph1, 170);
@@ -466,7 +503,7 @@ const Letters = () => {
 
                 // Split the line into words to check for bold formatting
                 const words = line.split(' ');
-                const boldWords = [employeeName, companyname, startdate, collegename, enddate];
+                const boldWords = [employeeName, designation, companyname, formattedstartdate, collegename, formattedenddate];
 
                 for (let i = 0; i < words.length; i++) {
                     const word = words[i];
@@ -486,7 +523,7 @@ const Letters = () => {
                     currentX += doc.getTextWidth(wordWithSpace);
                 }
 
-                y += 7; // Move to next line
+                y += 8; // Move to next line
             });
 
             y += 5; // Add some space after paragraph 1
@@ -518,11 +555,11 @@ const Letters = () => {
                     doc.setFont("MyriadPro", "normal");
                     doc.text(line, 18, para2Y);
                 }
-                para2Y += 7;
+                para2Y += 8;
             });
             y = para2Y + 5;
 
-            doc.save("Internship-Offer-Letter.pdf");
+            doc.save("Internship-certificate-Letter.pdf");
         } catch (error) {
             console.error("Error loading background image or font:", error);
         }
@@ -543,6 +580,9 @@ const Letters = () => {
             format: "a4"
         });
 
+        const formattedstartdate = formatDate(startdate);
+        const formattedenddate = formatDate(enddate);
+
         try {
             // Add Myriad Pro font
             const fontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-REGULAR.ttf`);
@@ -557,7 +597,8 @@ const Letters = () => {
             const addInternshipContent = () => {
                 doc.setFontSize(14);
                 doc.setFont("MyriadPro", "normal");
-                doc.text(`${new Date().toLocaleDateString()}`, 181, 36, { align: "center" });
+                doc.text(`${formatDate(new Date())}`, 181, 36, { align: "center" });
+
 
                 doc.setFontSize(12);
                 let y = 60;
@@ -648,60 +689,53 @@ const Letters = () => {
                 y += 10
                 doc.setFontSize(14);
                 doc.setFont("MyriadPro", "bold");
-                doc.text(`${startdate}`, 94, y);
+                doc.text(`${formattedstartdate}`, 94, y);
 
                 y += 10
                 doc.setFontSize(14);
                 doc.setFont("MyriadPro", "bold");
-                doc.text(`(${startdate} to ${enddate})`, 94, y);
+                doc.text(`(${formattedstartdate} to ${formattedenddate})`, 94, y);
             };
 
             const addInternshipContent2 = () => {
                 doc.setFontSize(13);
                 let y = 263;
 
-                // ----- Paragraph 1 with automatic line breaks (Modified for Internship) -----
                 doc.setFont("MyriadPro", "normal");
                 doc.setTextColor(0, 0, 0);
 
-                // Create the complete paragraph text for internship
                 const paragraph1 = `I am ${employeeName} with this accept the terms of employment as outlined in this letter.`;
 
-                // Split text to fit within page width (170mm width to leave margins)
                 const splitParagraph1 = doc.splitTextToSize(paragraph1, 170);
 
-                // Process each line to apply bold formatting to specific words
                 splitParagraph1.forEach(line => {
-                    let currentX = 25;
+                    const nameIndex = line.indexOf(employeeName);
+                    let xLine = 25;
 
-                    // Split the line into words to check for bold formatting
-                    const words = line.split(' ');
-                    const boldWords = [employeeName];
+                    if (nameIndex !== -1) {
+                        const beforeName = line.substring(0, nameIndex);
+                        const afterName = line.substring(nameIndex + employeeName.length);
 
-                    for (let i = 0; i < words.length; i++) {
-                        const word = words[i];
-                        const isLastWord = i === words.length - 1;
-                        const wordWithSpace = isLastWord ? word : word + ' ';
+                        doc.setFont("MyriadPro", "normal");
+                        doc.text(beforeName, xLine, y);
+                        xLine += doc.getTextWidth(beforeName);
 
-                        // Check if this word should be bold
-                        const shouldBeBold = boldWords.some(boldWord => {
-                            if (!boldWord) return false;
-                            return word.includes(boldWord.replace(/,/g, ''));
-                        });
+                        doc.setFont("MyriadPro", "bold");
+                        doc.text(employeeName, xLine, y);
+                        xLine += doc.getTextWidth(employeeName);
 
-                        if (shouldBeBold) {
-                            doc.setFont("MyriadPro", "bold");
-                        } else {
-                            doc.setFont("MyriadPro", "normal");
-                        }
-
-                        doc.text(wordWithSpace, currentX, y);
-                        currentX += doc.getTextWidth(wordWithSpace);
+                        doc.setFont("MyriadPro", "normal");
+                        doc.text(afterName, xLine, y);
+                    } else {
+                        doc.setFont("MyriadPro", "normal");
+                        doc.text(line, xLine, y);
                     }
 
-                    y += 7; // Move to next line
+                    y += 7; // Next line
                 });
             };
+
+
 
             // PAGE 1 - Add background and internship content
             const bg1Base64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/1.png`);
@@ -760,6 +794,35 @@ const Letters = () => {
             generatePDFInternship2();
         } else if (selectedLetter.id === 'offer') {
             generatePDFInternship3();
+        }
+    };
+
+    const formatDate = (inputDate) => {
+        const date = new Date(inputDate);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+    };
+
+    const handleInputChange = (fieldName, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [fieldName]: value
+        }));
+
+        // Special handling for date fields
+        if (fieldName.toLowerCase().includes('date')) {
+            const formatted = formatDate(value);
+            setFormattedData(prev => ({
+                ...prev,
+                [fieldName]: formatted
+            }));
+        } else {
+            setFormattedData(prev => ({
+                ...prev,
+                [fieldName]: value
+            }));
         }
     };
 
@@ -835,18 +898,28 @@ const Letters = () => {
                                             {field.label}
                                             {field.required && <span className="text-red-500 ml-1">*</span>}
                                         </label>
-                                        {field.type === 'textarea' ? (
+
+                                        {selectedLetter.id === 'experience' && field.name === 'period' ? (
+                                            <select
+                                                value={formData[field.name] || ''}
+                                                onChange={(e) => {
+                                                    handleInputChange(field.name, e.target.value);
+                                                    if (errors[field.name]) setErrors(prev => ({ ...prev, [field.name]: '' }));
+                                                }}
+                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors[field.name] ? 'border-red-500' : 'border-gray-300'}`}
+                                            >
+                                                <option value="">Select Period</option>
+                                                <option value="Probation Period">Probation</option>
+                                                <option value="Training Period">Training</option>
+                                            </select>
+                                        ) : field.type === 'textarea' ? (
                                             <textarea
                                                 value={formData[field.name] || ''}
                                                 onChange={(e) => {
                                                     handleInputChange(field.name, e.target.value);
-                                                    // Clear error when user starts typing
-                                                    if (errors[field.name]) {
-                                                        setErrors(prev => ({ ...prev, [field.name]: '' }));
-                                                    }
+                                                    if (errors[field.name]) setErrors(prev => ({ ...prev, [field.name]: '' }));
                                                 }}
-                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors[field.name] ? 'border-red-500' : 'border-gray-300'
-                                                    }`}
+                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors[field.name] ? 'border-red-500' : 'border-gray-300'}`}
                                                 rows="3"
                                                 placeholder={`Enter ${field.label.toLowerCase()}`}
                                             />
@@ -856,21 +929,20 @@ const Letters = () => {
                                                 value={formData[field.name] || ''}
                                                 onChange={(e) => {
                                                     handleInputChange(field.name, e.target.value);
-                                                    // Clear error when user starts typing
-                                                    if (errors[field.name]) {
-                                                        setErrors(prev => ({ ...prev, [field.name]: '' }));
-                                                    }
+                                                    if (errors[field.name]) setErrors(prev => ({ ...prev, [field.name]: '' }));
                                                 }}
-                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors[field.name] ? 'border-red-500' : 'border-gray-300'
-                                                    }`}
+                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors[field.name] ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder={field.type === 'date' ? '' : `Enter ${field.label.toLowerCase()}`}
                                             />
                                         )}
+
                                         {errors[field.name] && (
                                             <p className="text-red-500 text-sm mt-1">{errors[field.name]}</p>
                                         )}
                                     </div>
                                 ))}
+
+
                             </div>
                         </div>
 

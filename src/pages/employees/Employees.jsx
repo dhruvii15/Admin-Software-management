@@ -5,7 +5,7 @@ import { Button } from "react-bootstrap";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {faEdit, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 const Employees = () => {
     const [visible, setVisible] = useState(false);
@@ -16,6 +16,26 @@ const Employees = () => {
     const [isOpen2, setIsOpen2] = useState(false);
     const [filteredData, setFilteredData] = useState([]);
     const dropdownRef = useRef(null);
+    const [positions, setPositions] = useState([]);
+    const [showPositionInput, setShowPositionInput] = useState(false);
+
+    const handlePositionSelect = (position) => {
+        setFormData(prev => ({
+            ...prev,
+            position: position
+        }));
+        setIsOpen2(false);
+
+        // Clear error for position field
+        if (errors.position) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.position;
+                return newErrors;
+            });
+        }
+    };
+
 
     // Form state for employee data
     const [formData, setFormData] = useState({
@@ -27,7 +47,8 @@ const Employees = () => {
         completedate: '',
         increameentdate: '',
         phonenumber: '',
-        email: ''
+        email: '',
+        photos: [] // Add this line
     });
 
     useEffect(() => {
@@ -52,17 +73,17 @@ const Employees = () => {
                 setFormData({
                     name: '',
                     position: '',
-                    salary: '',
                     birthdate: '',
                     joindate: '',
-                    completedate: '',
-                    increameentdate: '',
+                    timeperiod: '',
                     phonenumber: '',
-                    email: ''
+                    email: '',
+                    photos: [] // Add this line
                 });
                 setId(undefined);
             }
             setErrors({});
+            setShowPositionInput(false);
             setVisible(!visible);
         }
     };
@@ -72,8 +93,11 @@ const Employees = () => {
         try {
             setLoading(true);
             // Replace with your employee API endpoint
-            const response = await axios.get('https://backend-software-management.onrender.com/api/employee/read');
+            const response = await axios.get('https://plexus-backend-software2.onrender.com/api/employee/read');
             setFilteredData(response.data.data);
+            const data = response.data.data
+            const uniquePositions = [...new Set(data.map(item => item.position).filter(Boolean))];
+            setPositions(uniquePositions);
         } catch (err) {
             console.error(err);
             toast.error("Failed to fetch employee data.");
@@ -117,6 +141,7 @@ const Employees = () => {
         if (!formData.joindate) newErrors.joindate = 'Join date is required';
         if (!formData.phonenumber.trim()) newErrors.phonenumber = 'Phone number is required';
         if (!formData.email.trim()) newErrors.email = 'Email is required';
+        if (!formData.photos || formData.photos.length === 0) newErrors.photos = 'At least one photo is required'; // Add this line
 
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -133,6 +158,51 @@ const Employees = () => {
         return newErrors;
     };
 
+    const handlePhotoChange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length + formData.photos.length > 3) {
+            toast.error('Maximum 3 photos allowed');
+            return;
+        }
+
+        const newPhotos = [];
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                newPhotos.push({
+                    file: file,
+                    preview: event.target.result,
+                    name: file.name
+                });
+
+                if (newPhotos.length === files.length) {
+                    setFormData(prev => ({
+                        ...prev,
+                        photos: [...prev.photos, ...newPhotos]
+                    }));
+
+                    // Clear error for photos field
+                    if (errors.photos) {
+                        setErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.photos;
+                            return newErrors;
+                        });
+                    }
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const removePhoto = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            photos: prev.photos.filter((_, i) => i !== index)
+        }));
+    };
+
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const validationErrors = validate();
@@ -144,13 +214,34 @@ const Employees = () => {
 
         try {
             setIsSubmitting(true);
-            // Replace with your employee API endpoints
+
+            // Create FormData for file upload
+            const formDataToSend = new FormData();
+
+            // Add all form fields
+            Object.keys(formData).forEach(key => {
+                if (key !== 'photos') {
+                    formDataToSend.append(key, formData[key]);
+                }
+            });
+
+            // Add photos
+            formData.photos.forEach((photo, index) => {
+                if (photo.file) {
+                    formDataToSend.append('photos', photo.file);
+                }
+            });
+
             const endpoint = id
-                ? `https://backend-software-management.onrender.com/api/employee/update/${id}`
-                : 'https://backend-software-management.onrender.com/api/employee/create';
+                ? `https://plexus-backend-software2.onrender.com/api/employee/update/${id}`
+                : 'https://plexus-backend-software2.onrender.com/api/employee/create';
             const method = id ? 'patch' : 'post';
 
-            const response = await axios[method](endpoint, formData);
+            const response = await axios[method](endpoint, formDataToSend, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
 
             toast.success(response.data.message);
             resetForm();
@@ -160,6 +251,7 @@ const Employees = () => {
             toast.error("An error occurred. Please try again.");
         } finally {
             setIsSubmitting(false);
+            setIsOpen2(false);
         }
     };
 
@@ -173,7 +265,8 @@ const Employees = () => {
             completedate: '',
             increameentdate: '',
             phonenumber: '',
-            email: ''
+            email: '',
+            photos: [] // Add this line
         });
         setId(null);
         setErrors({});
@@ -191,7 +284,8 @@ const Employees = () => {
                 completedate: employee.completedate || '',
                 increameentdate: employee.increameentdate || '',
                 phonenumber: employee.phonenumber || '',
-                email: employee.email || ''
+                email: employee.email || '',
+                photos: employee.photos || [] // Add this line
             });
             setId(employee._id);
             setVisible(true);
@@ -203,7 +297,7 @@ const Employees = () => {
             try {
                 setIsSubmitting(true);
                 // Replace with your employee API endpoint
-                const response = await axios.delete(`https://backend-software-management.onrender.com/api/employee/delete/${id}`);
+                const response = await axios.delete(`https://plexus-backend-software2.onrender.com/api/employee/delete/${id}`);
                 toast.success(response.data.message);
                 getData();
             } catch (err) {
@@ -264,6 +358,7 @@ const Employees = () => {
                                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                     <TableRow>
                                         <TableCell isHeader className="py-4 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Index</TableCell>
+                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Photos</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Name</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Position</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Salary</TableCell>
@@ -283,6 +378,31 @@ const Employees = () => {
                                                 <TableCell className="text-center px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {index + 1}
                                                 </TableCell>
+                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200 w-20">
+                                                    {employee.photos && employee.photos.length > 0 ? (
+                                                        (() => {
+                                                            const randomIndex = Math.floor(Math.random() * employee.photos.length);
+                                                            const randomPhoto = employee.photos[randomIndex];
+                                                            const photoUrl = typeof randomPhoto === 'string' ? randomPhoto : randomPhoto.preview;
+
+                                                            return (
+                                                                <div className="w-12 h-12 mx-auto">
+                                                                    <img
+                                                                        src={photoUrl}
+                                                                        alt="Random Employee"
+                                                                        className="w-12 h-12 object-cover rounded-full cursor-pointer border border-gray-300 shadow bg-gray-200"
+                                                                        onClick={() => window.open(photoUrl, '_blank')}
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        })()
+                                                    ) : (
+                                                        '-'
+                                                    )}
+                                                </TableCell>
+
+
+
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {employee.name}
                                                 </TableCell>
@@ -295,9 +415,24 @@ const Employees = () => {
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200 ">
                                                     {employee.phonenumber}
                                                 </TableCell>
-                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                    {employee.email}
+                                                <TableCell
+                                                    className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200"
+                                                    style={{
+                                                        minWidth: "80px",
+                                                        width: "80px",
+                                                        maxWidth: "80px",
+                                                        wordBreak: "break-word",
+                                                        overflowWrap: "break-word",
+                                                        whiteSpace: "normal",
+                                                        display: "table-cell",
+                                                    }}
+                                                >
+                                                    <div style={{ wordBreak: "break-word", overflowWrap: "break-word", whiteSpace: "normal" }}>
+                                                        {employee.email}
+                                                    </div>
                                                 </TableCell>
+
+
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {new Date(employee.birthdate).toLocaleDateString()}
                                                 </TableCell>
@@ -383,16 +518,60 @@ const Employees = () => {
                                             Position
                                             <span className="text-red-500 pl-2 font-normal text-lg">*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            name="position"
-                                            value={formData.position}
-                                            onChange={handleInputChange}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.position ? 'border-red-500' : 'border-gray-300'
-                                                }`}
-                                            placeholder="Enter position"
-                                            disabled={isSubmitting}
-                                        />
+
+                                        {positions.length > 0 && !showPositionInput ? (
+                                            <div className="relative" ref={dropdownRef}>
+                                                <div
+                                                    onClick={() => !isSubmitting && setIsOpen2(!isOpen2)}
+                                                    className={`w-full px-3 py-2 border rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.position ? 'border-red-500' : 'border-gray-300'
+                                                        }`}
+                                                >
+                                                    {formData.position || "Select position"}
+                                                </div>
+                                                {isOpen2 && (
+                                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg dark:bg-gray-700 dark:border-gray-600">
+                                                        {positions.map((position, index) => (
+                                                            <div
+                                                                key={index}
+                                                                onClick={() => handlePositionSelect(position)}
+                                                                className="px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                                                            >
+                                                                {position}
+                                                            </div>
+                                                        ))}
+                                                        <div
+                                                            onClick={() => setShowPositionInput(true)}
+                                                            className="px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 border-t"
+                                                        >
+                                                            + Add new position
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <input
+                                                    type="text"
+                                                    name="position"
+                                                    value={formData.position}
+                                                    onChange={handleInputChange}
+                                                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.position ? 'border-red-500' : 'border-gray-300'
+                                                        }`}
+                                                    placeholder="Enter position"
+                                                    disabled={isSubmitting}
+                                                />
+                                                {positions.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPositionInput(false)}
+                                                        className="text-sm text-[#0777AB] mt-1"
+                                                    >
+                                                        Choose from existing positions
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {errors.position && (
                                             <p className="text-red-500 text-sm mt-1">{errors.position}</p>
                                         )}
@@ -523,11 +702,150 @@ const Employees = () => {
                                             onChange={handleInputChange}
                                             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.phonenumber ? 'border-red-500' : 'border-gray-300'
                                                 }`}
-                                            placeholder="Enter phone number"
+                                            placeholder="Enter email"
                                             disabled={isSubmitting}
                                         />
                                         {errors.email && (
                                             <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Photos */}
+                                    <div className="mb-4 md:col-span-2">
+                                        <label className="block font-medium mb-3 text-gray-700 dark:text-gray-200">
+                                            Employee Photos
+                                            <span className="text-red-500 ml-1 font-normal">*</span>
+                                            <span className="text-sm font-normal text-gray-500 ml-2">(Maximum 3 photos)</span>
+                                        </label>
+
+                                        {/* Upload Area */}
+                                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                            {formData.photos.length < 3 ? (
+                                                <div className="text-center">
+                                                    <div className="mb-4">
+                                                        <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                    </div>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        multiple
+                                                        onChange={handlePhotoChange}
+                                                        className="hidden"
+                                                        id="photo-upload"
+                                                        disabled={isSubmitting}
+                                                    />
+                                                    <label
+                                                        htmlFor="photo-upload"
+                                                        className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                        </svg>
+                                                        Choose Photos
+                                                    </label>
+                                                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                                        PNG, JPG, GIF up to 10MB each
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center text-gray-500 dark:text-gray-400">
+                                                    <svg className="mx-auto h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    <p className="text-sm font-medium">Maximum photos reached</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Photo Preview Grid */}
+                                        {formData.photos.length > 0 && (
+                                            <div className="mt-4">
+                                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+                                                    Uploaded Photos ({formData.photos.length}/3)
+                                                </h4>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    {formData.photos.map((photo, index) => (
+                                                        <div
+                                                            key={index}
+                                                            className="relative group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 overflow-hidden hover:shadow-md transition-shadow"
+                                                        >
+                                                            <div className="aspect-square">
+                                                                <img
+                                                                    src={typeof photo === 'string' ? photo : photo.preview}
+                                                                    alt={`Preview ${index + 1}`}
+                                                                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                                    onClick={() => window.open(typeof photo === 'string' ? photo : photo.preview, '_blank')}
+                                                                />
+                                                            </div>
+
+                                                            {/* Overlay with actions */}
+                                                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+                                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removePhoto(index)}
+                                                                        className="p-1 bg-red-500 rounded-full shadow-md hover:bg-red-600 transition-colors"
+                                                                        disabled={isSubmitting}
+                                                                        title="Remove photo"
+                                                                    >
+                                                                        <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Photo number indicator */}
+                                                            <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                                                                {index + 1}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Progress indicator */}
+                                        <div className="mt-3 flex items-center justify-between">
+                                            <div className="flex items-center space-x-2">
+                                                <div className="flex space-x-1">
+                                                    {[1, 2, 3].map((num) => (
+                                                        <div
+                                                            key={num}
+                                                            className={`w-2 h-2 rounded-full ${num <= formData.photos.length
+                                                                    ? 'bg-blue-500'
+                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                }`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {formData.photos.length} of 3 photos
+                                                </span>
+                                            </div>
+
+                                            {formData.photos.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData(prev => ({ ...prev, photos: [] }))}
+                                                    className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium"
+                                                    disabled={isSubmitting}
+                                                >
+                                                    Clear all
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {errors.photos && (
+                                            <div className="mt-2 flex items-center space-x-1">
+                                                <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <p className="text-red-500 text-sm">{errors.photos}</p>
+                                            </div>
                                         )}
                                     </div>
                                 </div>

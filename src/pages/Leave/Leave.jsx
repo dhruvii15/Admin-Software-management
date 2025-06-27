@@ -5,9 +5,9 @@ import { Button } from "react-bootstrap";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {faEdit, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 
-const Intern = () => {
+const Leave = () => {
     const [visible, setVisible] = useState(false);
     const [id, setId] = useState();
     const [loading, setLoading] = useState(true);
@@ -17,15 +17,12 @@ const Intern = () => {
     const [filteredData, setFilteredData] = useState([]);
     const dropdownRef = useRef(null);
 
-    // Form state for intern data - Updated to match your schema
+    // Form state for leave data
     const [formData, setFormData] = useState({
         name: '',
-        position: '',
-        birthdate: '',
-        joindate: '',
-        timeperiod: '',
-        phonenumber: '',
-        email: ''
+        startDate: '',
+        endDate: '',
+        reason: ''
     });
 
     useEffect(() => {
@@ -49,12 +46,9 @@ const Intern = () => {
             if (mode === 'add') {
                 setFormData({
                     name: '',
-                    position: '',
-                    birthdate: '',
-                    joindate: '',
-                    timeperiod: '',
-                    phonenumber: '',
-                    email: ''
+                    startDate: '',
+                    endDate: '',
+                    reason: ''
                 });
                 setId(undefined);
             }
@@ -63,16 +57,16 @@ const Intern = () => {
         }
     };
 
-    // API calls - Update these URLs to your intern API endpoints
+    // API calls for leave management
     const getData = async (page = 1) => {
         try {
             setLoading(true);
-            // Replace with your intern API endpoint
-            const response = await axios.get('https://plexus-backend-software2.onrender.com/api/employee/intern/read');
+            // Replace with your leave API endpoint
+            const response = await axios.get('https://plexus-backend-software2.onrender.com/api/leave/read');
             setFilteredData(response.data.data);
         } catch (err) {
             console.error(err);
-            toast.error("Failed to fetch intern data.");
+            toast.error("Failed to fetch leave data.");
         } finally {
             setLoading(false);
         }
@@ -104,25 +98,33 @@ const Intern = () => {
     const validate = () => {
         const newErrors = {};
 
-        // All 7 fields are compulsory as per your requirement
-        if (!formData.name.trim()) newErrors.name = 'Intern name is required';
-        if (!formData.position.trim()) newErrors.position = 'Position is required';
-        if (!formData.birthdate) newErrors.birthdate = 'Birth date is required';
-        if (!formData.joindate) newErrors.joindate = 'Join date is required';
-        if (!formData.timeperiod.trim()) newErrors.timeperiod = 'Time period is required';
-        if (!formData.phonenumber.trim()) newErrors.phonenumber = 'Phone number is required';
-        if (!formData.email.trim()) newErrors.email = 'Email is required';
+        // All fields validation
+        if (!formData.name.trim()) newErrors.name = 'Employee name is required';
+        if (!formData.startDate) newErrors.startDate = 'Start date is required';
+        if (!formData.reason.trim()) newErrors.reason = 'Leave reason is required';
 
-        // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (formData.email && !emailRegex.test(formData.email)) {
-            newErrors.email = 'Please enter a valid email address';
+        // Date validation - should not be in the past
+        const startDate = new Date(formData.startDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+
+        if (formData.startDate && startDate < today) {
+            newErrors.startDate = 'Start date cannot be in the past';
         }
 
-        // Phone number validation (basic)
-        const phoneRegex = /^\d{10,15}$/;
-        if (formData.phonenumber && !phoneRegex.test(formData.phonenumber.replace(/\D/g, ''))) {
-            newErrors.phonenumber = 'Please enter a valid phone number';
+        // End date validation (if provided)
+        if (formData.endDate) {
+            const endDate = new Date(formData.endDate);
+            endDate.setHours(0, 0, 0, 0);
+
+            if (endDate < today) {
+                newErrors.endDate = 'End date cannot be in the past';
+            }
+
+            if (formData.startDate && endDate < startDate) {
+                newErrors.endDate = 'End date cannot be before start date';
+            }
         }
 
         return newErrors;
@@ -139,15 +141,15 @@ const Intern = () => {
 
         try {
             setIsSubmitting(true);
-            // Replace with your intern API endpoints
+            // Replace with your leave API endpoints
             const endpoint = id
-                ? `https://plexus-backend-software2.onrender.com/api/employee/intern/update/${id}`
-                : 'https://plexus-backend-software2.onrender.com/api/employee/intern/create';
+                ? `https://plexus-backend-software2.onrender.com/api/leave/update/${id}`
+                : 'https://plexus-backend-software2.onrender.com/api/leave/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formData);
 
-            toast.success(response.data.message || (id ? 'Intern updated successfully!' : 'Intern created successfully!'));
+            toast.success(response.data.message || (id ? 'Leave updated successfully!' : 'Leave created successfully!'));
             resetForm();
             getData();
         } catch (err) {
@@ -161,41 +163,35 @@ const Intern = () => {
     const resetForm = () => {
         setFormData({
             name: '',
-            position: '',
-            birthdate: '',
-            joindate: '',
-            timeperiod: '',
-            phonenumber: '',
-            email: ''
+            startDate: '',
+            endDate: '',
+            reason: ''
         });
         setId(null);
         setErrors({});
         setVisible(false);
     };
 
-    const handleEdit = (intern) => {
+    const handleEdit = (leave) => {
         if (!isSubmitting) {
             setFormData({
-                name: intern.name || '',
-                position: intern.position || '',
-                birthdate: intern.birthdate || '',
-                joindate: intern.joindate || '',
-                timeperiod: intern.timeperiod || '',
-                phonenumber: intern.phonenumber || '',
-                email: intern.email || ''
+                name: leave.name || '',
+                startDate: leave.startDate || '',
+                endDate: leave.endDate || '',
+                reason: leave.reason || ''
             });
-            setId(intern._id);
+            setId(leave._id);
             setVisible(true);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!isSubmitting && window.confirm("Are you sure you want to delete this intern?")) {
+        if (!isSubmitting && window.confirm("Are you sure you want to delete this leave record?")) {
             try {
                 setIsSubmitting(true);
-                // Replace with your intern API endpoint
-                const response = await axios.delete(`https://plexus-backend-software2.onrender.com/api/employee/intern/delete/${id}`);
-                toast.success(response.data.message || 'Intern deleted successfully!');
+                // Replace with your leave API endpoint
+                const response = await axios.delete(`https://plexus-backend-software2.onrender.com/api/leave/delete/${id}`);
+                toast.success(response.data.message || 'Leave deleted successfully!');
                 getData();
             } catch (err) {
                 console.error(err);
@@ -239,7 +235,7 @@ const Intern = () => {
                                         className="rounded-md border-0 shadow-md px-4 py-2 text-white"
                                         style={{ background: "#0777AB" }}
                                     >
-                                        <FontAwesomeIcon icon={faPlus} className='pe-2' /> Add Intern
+                                        <FontAwesomeIcon icon={faPlus} className='pe-2' /> Add Leave
                                     </Button>
                                 </div>
                             </div>
@@ -253,50 +249,37 @@ const Intern = () => {
                                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                     <TableRow>
                                         <TableCell isHeader className="py-4 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Index</TableCell>
-                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Name</TableCell>
-                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Position</TableCell>
-                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Birth Date</TableCell>
-                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Join Date</TableCell>
-                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Time Period</TableCell>
-                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Phone</TableCell>
-                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Email</TableCell>
+                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Employee Name</TableCell>
+                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Leave Period</TableCell>
+                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Leave Reason</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Actions</TableCell>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05] text-center">
                                     {currentItems.length > 0 ? (
-                                        currentItems.map((intern, index) => (
-                                            <TableRow key={intern._id}>
+                                        currentItems.map((leave, index) => (
+                                            <TableRow key={leave._id}>
                                                 <TableCell className="text-center px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {index + 1}
                                                 </TableCell>
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                    {intern.name}
+                                                    {leave.name}
                                                 </TableCell>
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                    {intern.position}
+                                                    {leave.endDate ?
+                                                        `${new Date(leave.startDate).toLocaleDateString()} to ${new Date(leave.endDate).toLocaleDateString()}` :
+                                                        new Date(leave.startDate).toLocaleDateString()
+                                                    }
                                                 </TableCell>
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                    {new Date(intern.birthdate).toLocaleDateString()}
-                                                </TableCell>
-                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                    {new Date(intern.joindate).toLocaleDateString()}
-                                                </TableCell>
-                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                    {intern.timeperiod}
-                                                </TableCell>
-                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                    {intern.phonenumber}
-                                                </TableCell>
-                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                    {intern.email}
+                                                    {leave.reason}
                                                 </TableCell>
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     <div className="flex align-middle justify-center gap-4">
-                                                        <button style={{ color: "#0385C3" }} onClick={() => handleEdit(intern)}>
+                                                        <button style={{ color: "#0385C3" }} onClick={() => handleEdit(leave)}>
                                                             <FontAwesomeIcon icon={faEdit} className="text-lg" />
                                                         </button>
-                                                        <button className="text-red-600" onClick={() => handleDelete(intern._id)}>
+                                                        <button className="text-red-600" onClick={() => handleDelete(leave._id)}>
                                                             <FontAwesomeIcon icon={faTrash} className="text-lg" />
                                                         </button>
                                                     </div>
@@ -305,7 +288,7 @@ const Intern = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={9} className="text-center pt-5 pb-4 dark:text-gray-200">No Data Found</td>
+                                            <td colSpan={5} className="text-center pt-5 pb-4 dark:text-gray-200">No Data Found</td>
                                         </tr>
                                     )}
                                 </TableBody>
@@ -315,7 +298,7 @@ const Intern = () => {
                 </div>
             </div>
 
-            {/* Modal for Add/Edit Intern */}
+            {/* Modal for Add/Edit Leave */}
             {visible && (
                 <div className="fixed inset-0 z-99999 flex items-center justify-center">
                     {/* Modal Backdrop */}
@@ -325,22 +308,22 @@ const Intern = () => {
                     ></div>
 
                     {/* Modal Content */}
-                    <div className="relative bg-white rounded-lg w-full max-w-2xl mx-4 dark:bg-gray-800 dark:text-gray-200 max-h-[90vh] overflow-y-auto">
+                    <div className="relative bg-white rounded-lg w-full max-w-lg mx-4 dark:bg-gray-800 dark:text-gray-200 max-h-[90vh] overflow-y-auto">
                         {/* Header */}
                         <div className="px-6 py-4 border-b">
                             <h3 className="text-xl font-semibold">
-                                {id ? "Edit Intern" : "Add Intern"}
+                                {id ? "Edit Leave" : "Add Leave"}
                             </h3>
                         </div>
 
                         {/* Body */}
                         <div className="px-6 py-4">
                             <form onSubmit={handleSubmit}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Name */}
+                                <div className="space-y-4">
+                                    {/* Employee Name */}
                                     <div className="mb-4">
                                         <label className="block font-medium mb-2">
-                                            Intern Name
+                                            Employee Name
                                             <span className="text-red-500 pl-2 font-normal text-lg">*</span>
                                         </label>
                                         <input
@@ -350,7 +333,7 @@ const Intern = () => {
                                             onChange={handleInputChange}
                                             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.name ? 'border-red-500' : 'border-gray-300'
                                                 }`}
-                                            placeholder="Enter intern name"
+                                            placeholder="Enter employee name"
                                             disabled={isSubmitting}
                                         />
                                         {errors.name && (
@@ -358,133 +341,69 @@ const Intern = () => {
                                         )}
                                     </div>
 
-                                    {/* Position */}
+                                    {/* Leave Date */}
+                                    {/* Start Date */}
                                     <div className="mb-4">
                                         <label className="block font-medium mb-2">
-                                            Position
-                                            <span className="text-red-500 pl-2 font-normal text-lg">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="position"
-                                            value={formData.position}
-                                            onChange={handleInputChange}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.position ? 'border-red-500' : 'border-gray-300'
-                                                }`}
-                                            placeholder="Enter position"
-                                            disabled={isSubmitting}
-                                        />
-                                        {errors.position && (
-                                            <p className="text-red-500 text-sm mt-1">{errors.position}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Birth Date */}
-                                    <div className="mb-4">
-                                        <label className="block font-medium mb-2">
-                                            Birth Date
+                                            Start Date
                                             <span className="text-red-500 pl-2 font-normal text-lg">*</span>
                                         </label>
                                         <input
                                             type="date"
-                                            name="birthdate"
-                                            value={formData.birthdate}
+                                            name="startDate"
+                                            value={formData.startDate}
                                             onChange={handleInputChange}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.birthdate ? 'border-red-500' : 'border-gray-300'
-                                                }`}
+                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.startDate ? 'border-red-500' : 'border-gray-300'}`}
                                             disabled={isSubmitting}
                                         />
-                                        {errors.birthdate && (
-                                            <p className="text-red-500 text-sm mt-1">{errors.birthdate}</p>
+                                        {errors.startDate && (
+                                            <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
                                         )}
                                     </div>
 
-                                    {/* Join Date */}
+                                    {/* End Date */}
                                     <div className="mb-4">
                                         <label className="block font-medium mb-2">
-                                            Join Date
-                                            <span className="text-red-500 pl-2 font-normal text-lg">*</span>
+                                            End Date
+                                            <span className="text-gray-500 text-sm">(Optional)</span>
                                         </label>
                                         <input
                                             type="date"
-                                            name="joindate"
-                                            value={formData.joindate}
+                                            name="endDate"
+                                            value={formData.endDate}
                                             onChange={handleInputChange}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.joindate ? 'border-red-500' : 'border-gray-300'
-                                                }`}
+                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.endDate ? 'border-red-500' : 'border-gray-300'}`}
                                             disabled={isSubmitting}
                                         />
-                                        {errors.joindate && (
-                                            <p className="text-red-500 text-sm mt-1">{errors.joindate}</p>
+                                        {errors.endDate && (
+                                            <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>
                                         )}
                                     </div>
 
-                                    {/* Time Period */}
+                                    {/* Leave Reason */}
                                     <div className="mb-4">
                                         <label className="block font-medium mb-2">
-                                            Time Period
+                                            Leave Reason
                                             <span className="text-red-500 pl-2 font-normal text-lg">*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            name="timeperiod"
-                                            value={formData.timeperiod}
+                                        <textarea
+                                            name="reason"
+                                            value={formData.reason}
                                             onChange={handleInputChange}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.timeperiod ? 'border-red-500' : 'border-gray-300'
+                                            rows={4}
+                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none ${errors.reason ? 'border-red-500' : 'border-gray-300'
                                                 }`}
-                                            placeholder="e.g., 3 months, 6 months"
+                                            placeholder="Enter leave reason"
                                             disabled={isSubmitting}
                                         />
-                                        {errors.timeperiod && (
-                                            <p className="text-red-500 text-sm mt-1">{errors.timeperiod}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Phone Number */}
-                                    <div className="mb-4">
-                                        <label className="block font-medium mb-2">
-                                            Phone Number
-                                            <span className="text-red-500 pl-2 font-normal text-lg">*</span>
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            name="phonenumber"
-                                            value={formData.phonenumber}
-                                            onChange={handleInputChange}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.phonenumber ? 'border-red-500' : 'border-gray-300'
-                                                }`}
-                                            placeholder="Enter phone number"
-                                            disabled={isSubmitting}
-                                        />
-                                        {errors.phonenumber && (
-                                            <p className="text-red-500 text-sm mt-1">{errors.phonenumber}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Email */}
-                                    <div className="mb-4">
-                                        <label className="block font-medium mb-2">
-                                            Email
-                                            <span className="text-red-500 pl-2 font-normal text-lg">*</span>
-                                        </label>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleInputChange}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${errors.email ? 'border-red-500' : 'border-gray-300'
-                                                }`}
-                                            placeholder="Enter email address"
-                                            disabled={isSubmitting}
-                                        />
-                                        {errors.email && (
-                                            <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                                        {errors.reason && (
+                                            <p className="text-red-500 text-sm mt-1">{errors.reason}</p>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex gap-4 mt-4">
+                                <div className="flex gap-4 mt-6">
                                     <button
                                         type="button"
                                         onClick={() => toggleModal()}
@@ -517,4 +436,4 @@ const Intern = () => {
     );
 };
 
-export default Intern;
+export default Leave;

@@ -44,7 +44,7 @@ const SignIn = () => {
                 onSubmit={async (values, { setErrors, setSubmitting }) => {
                   setLoading(true);
                   try {
-                    const response = await axios.post('https://backend-software-management.onrender.com/api/admin/login', {
+                    const response = await axios.post('https://plexus-backend-software2.onrender.com/api/admin/login', {
                       email: values.email,
                       pass: values.pass
                     });

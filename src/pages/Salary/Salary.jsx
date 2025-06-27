@@ -5,7 +5,7 @@ import { Button } from "react-bootstrap";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faPlus, faTrash, faArrowUpFromBracket, faFileArrowUp, faEye, faFileInvoice, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faPlus, faTrash, faArrowUpFromBracket, faFileArrowUp, faEye, faFileInvoice, faChevronDown, faSave, faTimes, faCheck } from "@fortawesome/free-solid-svg-icons";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 
 const Salary = () => {
@@ -15,16 +15,21 @@ const Salary = () => {
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [filteredData, setFilteredData] = useState([]);
-    const [originalData, setOriginalData] = useState([]); // Store original data
+    const [originalData, setOriginalData] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
     const [selectedFileName, setSelectedFileName] = useState("");
-    const [currentFileName, setCurrentFileName] = useState(""); // For showing current file in edit mode
+    const [currentFileName, setCurrentFileName] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const [salaryData, setSalaryData] = useState([]);
     const fileInputRef = useRef(null);
     const [selectedYear, setSelectedYear] = useState("");
     const [isYearFilterOpen, setIsYearFilterOpen] = useState(false);
     const yearFilterRef = useRef(null);
+
+    // New state for employee editing
+    const [editingEmployee, setEditingEmployee] = useState(null);
+    const [employeeRemark, setEmployeeRemark] = useState("");
+    const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false);
 
     // Add this useEffect to handle clicking outside the year filter dropdown
     useEffect(() => {
@@ -86,7 +91,7 @@ const Salary = () => {
                 });
                 setId(undefined);
                 setSelectedFileName("");
-                setCurrentFileName(""); // Clear current file name
+                setCurrentFileName("");
             }
             setErrors({});
             setVisible(!visible);
@@ -98,10 +103,10 @@ const Salary = () => {
         try {
             setLoading(true);
             // Replace with your salary API endpoint
-            const response = await axios.get('https://backend-software-management.onrender.com/api/employee/salary/read');
+            const response = await axios.get('https://plexus-backend-software2.onrender.com/api/employee/salary/read');
             const data = response.data.data;
-            setOriginalData(data); // Store original data
-            setFilteredData(data); // Set filtered data initially
+            setOriginalData(data);
+            setFilteredData(data);
         } catch (err) {
             console.error(err);
             toast.error("Failed to fetch salary data.");
@@ -192,7 +197,7 @@ const Salary = () => {
         // All fields are required
         if (!formData.month.trim()) newErrors.month = 'Month is required';
         if (!formData.year.trim()) newErrors.year = 'Year is required';
-        
+
         // For new entries, PDF is required. For updates, it's optional
         if (!id && !formData.pdf) {
             newErrors.pdf = 'Salary PDF file is required';
@@ -224,7 +229,7 @@ const Salary = () => {
             const formDataToSend = new FormData();
             formDataToSend.append('month', formData.month);
             formDataToSend.append('year', formData.year);
-            
+
             // Only append PDF if a new file is selected
             if (formData.pdf) {
                 formDataToSend.append('pdf', formData.pdf);
@@ -232,8 +237,8 @@ const Salary = () => {
 
             // Replace with your salary API endpoints
             const endpoint = id
-                ? `https://backend-software-management.onrender.com/api/employee/salary/update/${id}`
-                : 'https://backend-software-management.onrender.com/api/employee/salary/create';
+                ? `https://plexus-backend-software2.onrender.com/api/employee/salary/update/${id}`
+                : 'https://plexus-backend-software2.onrender.com/api/employee/salary/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formDataToSend, {
@@ -275,11 +280,11 @@ const Salary = () => {
             setFormData({
                 month: salary.month || '',
                 year: salary.year || '',
-                pdf: null // File cannot be pre-filled for security reasons
+                pdf: null
             });
             setId(salary._id);
-            setSelectedFileName(""); // Reset file selection for edit
-            setCurrentFileName(salary.pdf || ""); // Show current file name
+            setSelectedFileName("");
+            setCurrentFileName(salary.pdf || "");
             setVisible(true);
         }
     };
@@ -288,8 +293,7 @@ const Salary = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this salary record?")) {
             try {
                 setIsSubmitting(true);
-                // Replace with your salary API endpoint
-                const response = await axios.delete(`https://backend-software-management.onrender.com/api/employee/salary/delete/${id}`);
+                const response = await axios.delete(`https://plexus-backend-software2.onrender.com/api/employee/salary/delete/${id}`);
                 toast.success(response.data.message || 'Salary deleted successfully!');
                 getData();
             } catch (err) {
@@ -310,7 +314,8 @@ const Salary = () => {
     const handleDownload = async (salary) => {
         setLoading(true);
         try {
-            setSalaryData(salary);
+            setSalaryData(salary.employees);
+            setId(salary._id);
             setIsOpen(true);
             console.log(salary);
         } catch (error) {
@@ -320,8 +325,50 @@ const Salary = () => {
         }
     };
 
+    // NEW FUNCTIONS FOR EMPLOYEE EDITING
+    const handleEmployeeEdit = (employee) => {
+        setEditingEmployee(employee._id);
+        setEmployeeRemark(employee.remark || "");
+    };
+
+    const handleEmployeeUpdate = async (employeename) => {
+        try {
+            setIsUpdatingEmployee(true);
+
+            // Call update API
+            const response = await axios.patch(`https://plexus-backend-software2.onrender.com/api/employee/salary/update/${id}`, {
+                remark: employeeRemark,
+                name: employeename
+            });
+
+            toast.success(response.data.message || 'Employee remark updated successfully!');
+
+            // Update the local salaryData state to reflect changes immediately
+            setSalaryData(prevData =>
+                prevData.map(emp =>
+                    emp.name === employeename
+                        ? { ...emp, remark: employeeRemark }
+                        : emp
+                )
+            );
+
+            setEditingEmployee(null);
+            setEmployeeRemark("");
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Failed to update employee remark.");
+        } finally {
+            setIsUpdatingEmployee(false);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingEmployee(null);
+        setEmployeeRemark("");
+    };
+
     const exportToCSV = () => {
-        const headers = ['Name', 'Present Days', 'Absent Days', 'Weekly Off', 'Total Days', 'Total Salary', 'Pay Salary', 'Cut Salary'];
+        const headers = ['Name', 'Present Days', 'Absent Days', 'Weekly Off', 'Total Days', 'Total Salary', 'Pay Salary', 'Cut Salary', 'Remark'];
         const csvContent = [
             headers.join(','),
             ...salaryData.map(row => [
@@ -332,7 +379,8 @@ const Salary = () => {
                 row.totalDays,
                 row.totalSalary,
                 row.paySalary,
-                row.cutSalary
+                row.cutSalary,
+                `"${row.remark || ''}"`
             ].join(','))
         ].join('\n');
 
@@ -454,7 +502,7 @@ const Salary = () => {
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {salary.pdf ? (
                                                         <button
-                                                            onClick={() => window.open(`https://backend-software-management.onrender.com/images/salaryreport/${salary.pdf}`, '_blank')}
+                                                            onClick={() => window.open(salary.pdf, '_blank')}
                                                             className="text-[#0777AB] transform transition-all duration-200 hover:scale-110"
                                                         >
                                                             <FontAwesomeIcon icon={faEye} className="text-lg" />
@@ -465,7 +513,7 @@ const Salary = () => {
                                                     {salary.pdf ? (
                                                         <button
                                                             className="text-[#0777AB] transform transition-all duration-200 hover:scale-110"
-                                                            onClick={() => handleDownload(salary.employees)}
+                                                            onClick={() => handleDownload(salary)}
                                                         >
                                                             <FontAwesomeIcon icon={faFileInvoice} className="text-lg text-green-600" />
                                                         </button>
@@ -574,7 +622,6 @@ const Salary = () => {
                                         <label className="block font-medium mb-2">
                                             Salary PDF <span className="text-xs">(PDF only - 5 MB max)</span>
                                             {!id && <span className="text-red-500 pl-2 font-normal text-lg">*</span>}
-                                            {/* {id && <span className="text-gray-500 text-xs ml-2">(Optional - leave empty to keep current file)</span>} */}
                                         </label>
 
                                         {/* Show current file info in edit mode */}
@@ -585,13 +632,6 @@ const Salary = () => {
                                                     <span className="text-sm text-blue-800 dark:text-blue-200">
                                                         Current file: <strong>{currentFileName}</strong>
                                                     </span>
-                                                    {/* <button
-                                                        type="button"
-                                                        onClick={() => window.open(`https://backend-software-management.onrender.com/images/salaryreport/${currentFileName}`, '_blank')}
-                                                        className="text-blue-600 hover:text-blue-800 ml-2"
-                                                    >
-                                                        <FontAwesomeIcon icon={faEye} className="text-sm" />
-                                                    </button> */}
                                                 </div>
                                             </div>
                                         )}
@@ -650,37 +690,42 @@ const Salary = () => {
                                                     Selected file: <span className="font-medium">{selectedFileName}</span>
                                                 </p>
                                             )}
-
-                                            {/* Show error if exists */}
-                                            {errors.pdf && (
-                                                <p className="text-red-500 text-sm mt-1">{errors.pdf}</p>
-                                            )}
                                         </div>
+
+                                        {errors.pdf && (
+                                            <p className="text-red-500 text-sm mt-1">{errors.pdf}</p>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Action Buttons */}
-                                <div className="flex gap-4 mt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleModal()}
+                                {/* Footer */}
+                                <div className="flex justify-end gap-3 pt-4 border-t">
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => !isSubmitting && toggleModal('add')}
                                         disabled={isSubmitting}
-                                        className="w-1/2 py-2 px-4 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                                        className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                                     >
                                         Cancel
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="w-1/2 py-2 px-4 text-white rounded-lg transition-colors duration-200"
-                                        style={{ backgroundColor: "#0777AB" }}
+                                        className="px-4 py-2 rounded-md text-white border-0"
+                                        style={{ background: "#0777AB" }}
                                     >
                                         {isSubmitting ? (
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                {id ? "Updating..." : "Creating..."}
+                                            </div>
                                         ) : (
-                                            id ? 'Update' : 'Submit'
+                                            <>
+                                                <FontAwesomeIcon icon={faSave} className="me-2" />
+                                                {id ? "Update" : "Create"}
+                                            </>
                                         )}
-                                    </button>
+                                    </Button>
                                 </div>
                             </form>
                         </div>
@@ -688,9 +733,10 @@ const Salary = () => {
                 </div>
             )}
 
+            {/* Employee Details Modal */}
             {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-99999">
-                    <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+                    <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
                         {/* Header */}
                         <div className="bg-[#0777AB] text-white p-6 relative">
                             <div className="flex items-center justify-between">
@@ -754,6 +800,9 @@ const Salary = () => {
                                         <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-200 border-b border-gray-200">
                                             <i className="fas fa-hand-holding-usd mr-2 text-green-600"></i>Pay Salary
                                         </th>
+                                        <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-200 border-b border-gray-200">
+                                            <i className="fas fa-comment mr-2"></i>Remark
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -766,16 +815,11 @@ const Salary = () => {
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-200">{employee.name}</p>
-                                                        {/* <p className="text-xs text-gray-500">
-                                                            <i className="fas fa-id-card mr-1"></i>
-                                                            ID: {employee._id.slice(-6)}
-                                                        </p> */}
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center border-b border-gray-200">
                                                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-200">
-                                                    {/* <i className="fas fa-calculator mr-1"></i> */}
                                                     {employee.totalDays}
                                                 </span>
                                             </td>
@@ -784,13 +828,28 @@ const Salary = () => {
                                                     <i className="fas fa-check mr-1"></i>
                                                     {employee.present}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center border-b border-gray-200">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${employee.absent > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                                            </td><td className="px-6 py-4 text-center border-b border-gray-200">
+                                                <span
+                                                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${employee.absent > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'} cursor-pointer relative group`}
+                                                >
                                                     <i className="fas fa-times mr-1"></i>
                                                     {employee.absent}
+
+                                                    {/* Green dot if remark exists */}
+                                                    {employee.remark && (
+                                                        <span className="absolute -top-1 -right-1 h-[13px] w-[13px] rounded-full bg-green-500 border-2 border-white"></span>
+                                                    )}
+
+                                                    {/* Remark tooltip on hover */}
+                                                    {employee.remark && (
+                                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none">
+                                                            {employee.remark}
+                                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                        </div>
+                                                    )}
                                                 </span>
                                             </td>
+
                                             <td className="px-6 py-4 text-center border-b border-gray-200">
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                                                     <i className="fas fa-calendar-day mr-1"></i>
@@ -815,7 +874,57 @@ const Salary = () => {
                                                     {Math.round(employee.paySalary)}
                                                 </span>
                                             </td>
-
+                                            <td className="px-6 py-4 text-center border-b border-gray-200">
+                                                {editingEmployee === employee._id ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <textarea
+                                                            value={employeeRemark}
+                                                            onChange={(e) => setEmployeeRemark(e.target.value)}
+                                                            placeholder="Enter remark..."
+                                                            className="w-32 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
+                                                            rows="2"
+                                                            disabled={isUpdatingEmployee}
+                                                        />
+                                                        <div className="flex flex-col gap-1">
+                                                            <button
+                                                                onClick={() => handleEmployeeUpdate(employee.name)}
+                                                                disabled={isUpdatingEmployee}
+                                                                className="text-green-600 hover:text-green-800 transition-colors p-1"
+                                                                title="Save remark"
+                                                            >
+                                                                {isUpdatingEmployee ? (
+                                                                    <div className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                                                ) : (
+                                                                    <FontAwesomeIcon icon={faCheck} className="text-sm" />
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                onClick={handleCancelEdit}
+                                                                disabled={isUpdatingEmployee}
+                                                                className="text-red-600 hover:text-red-800 transition-colors p-1"
+                                                                title="Cancel"
+                                                            >
+                                                                <FontAwesomeIcon icon={faTimes} className="text-sm" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {/* {employee.remark && (
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400 max-w-20 truncate" title={employee.remark}>
+                                                                {employee.remark}
+                                                            </span>
+                                                        )} */}
+                                                        <button
+                                                            onClick={() => handleEmployeeEdit(employee)}
+                                                            className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                                                            title="Edit remark"
+                                                        >
+                                                            <FontAwesomeIcon icon={faEdit} className="text-sm" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -825,7 +934,9 @@ const Salary = () => {
                 </div>
             )}
 
+            {/* Toast Container */}
             <ToastContainer position="top-center" className="!z-[99999]" />
+
         </div>
     );
 };

@@ -26,9 +26,10 @@ const Evaluations = () => {
         employeeName: '',
         month: new Date().getMonth() + 1,
         year: new Date().getFullYear(),
-        evaluatorRole: 'hr',
         grades: {
             work: '',
+            speed: '',
+            // overall: '',
             leave: '',
             time: '',
             behaviour: ''
@@ -53,14 +54,16 @@ const Evaluations = () => {
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
     const gradeOptions = [
-        { value: 'A', label: 'A - Excellent (90-100%)', points: 4.0, color: 'bg-green-500', bgColor: 'bg-green-50' },
-        { value: 'B', label: 'B - Good (80-89%)', points: 3.0, color: 'bg-blue-500', bgColor: 'bg-blue-50' },
-        { value: 'C', label: 'C - Average (70-79%)', points: 2.0, color: 'bg-yellow-500', bgColor: 'bg-yellow-50' },
-        { value: 'D', label: 'D - Below Average (60-69%)', points: 1.0, color: 'bg-red-500', bgColor: 'bg-red-50' }
+        { value: 'A', label: 'A - Excellent (75-100%)', points: 4.0, color: 'bg-green-500', bgColor: 'bg-green-50' },
+        { value: 'B', label: 'B - Good (74-50%)', points: 3.0, color: 'bg-blue-500', bgColor: 'bg-blue-50' },
+        { value: 'C', label: 'C - Average (49-25%)', points: 2.0, color: 'bg-yellow-500', bgColor: 'bg-yellow-50' },
+        { value: 'D', label: 'D - Below Average (Below 24%)', points: 1.0, color: 'bg-red-500', bgColor: 'bg-red-50' }
     ];
 
     const gradeLabels = {
         work: { icon: faBriefcase, label: 'Work Performance', color: 'text-blue-600' },
+        speed: { icon: faBriefcase, label: 'Work Speed & Efficiency', color: 'text-indigo-600' },
+        // overall: { icon: faTarget, label: 'Overall Performance', color: 'text-emerald-600' },
         leave: { icon: faCalendar, label: 'Leave Management', color: 'text-green-600' },
         time: { icon: faClock, label: 'Time Management', color: 'text-purple-600' },
         behaviour: { icon: faUserCheck, label: 'Behaviour & Attitude', color: 'text-orange-600' }
@@ -78,7 +81,7 @@ const Evaluations = () => {
     const fetchEmployees = async () => {
         setLoading(true);
         try {
-            const response = await fetch('https://backend-software-management.onrender.com/api/employee/read');
+            const response = await fetch('https://plexus-backend-software2.onrender.com/api/employee/read');
             if (response.ok) {
                 const data = await response.json();
                 setEmployees(data.data || []);
@@ -95,7 +98,7 @@ const Evaluations = () => {
     const fetchEvaluations = async () => {
         setEvaluationsLoading(true);
         try {
-            const response = await fetch('https://backend-software-management.onrender.com/api/evaluations/read');
+            const response = await fetch('https://plexus-backend-software2.onrender.com/api/evaluations/read');
             if (response.ok) {
                 const data = await response.json();
                 setEvaluations(data.data || []);
@@ -109,16 +112,15 @@ const Evaluations = () => {
         }
     };
 
-    const checkExistingEvaluation = (employeeId, month, year, evaluatorRole) => {
-        if (!employeeId || !month || !year || !evaluatorRole) return null;
+    const checkExistingEvaluation = (employeeId, month, year) => {
+        if (!employeeId || !month || !year) return null;
 
         const existing = evaluations.find(e => {
             const employeeMatch = (e.employeeId === employeeId || e.employeeId === employeeId.toString());
             const monthMatch = parseInt(e.month) === parseInt(month);
             const yearMatch = parseInt(e.year) === parseInt(year);
-            const roleMatch = e.evaluatorRole === evaluatorRole;
 
-            return employeeMatch && monthMatch && yearMatch && roleMatch;
+            return employeeMatch && monthMatch && yearMatch;
         });
 
         return existing;
@@ -143,8 +145,7 @@ const Evaluations = () => {
         const existing = checkExistingEvaluation(
             employeeId,
             evaluationData.month,
-            evaluationData.year,
-            evaluationData.evaluatorRole
+            evaluationData.year
         );
 
         setExistingEvaluationData(existing);
@@ -162,9 +163,8 @@ const Evaluations = () => {
         // Show toast if evaluation already exists
         if (existing) {
             const monthName = months.find(m => m.value === evaluationData.month)?.label || 'Unknown Month';
-            const roleName = evaluationData.evaluatorRole === 'hr' ? 'HR Manager' : 'Administrator';
             toast.warning(
-                `Note: Evaluation already exists for ${employeeName} for ${monthName} ${evaluationData.year} by ${roleName}`,
+                `Note: Evaluation already exists for ${employeeName} for ${monthName} ${evaluationData.year}`,
                 { autoClose: 3000 }
             );
         }
@@ -180,8 +180,7 @@ const Evaluations = () => {
             const existing = checkExistingEvaluation(
                 selectedEmployee,
                 newData.month,
-                newData.year,
-                newData.evaluatorRole
+                newData.year
             );
             setExistingEvaluationData(existing);
 
@@ -192,40 +191,9 @@ const Evaluations = () => {
                     (employee.name || employee.fullName || `${employee.firstName || ''} ${employee.lastName || ''}`.trim())
                     : 'Selected Employee';
                 const monthName = months.find(m => m.value === newData.month)?.label || 'Unknown Month';
-                const roleName = newData.evaluatorRole === 'hr' ? 'HR Manager' : 'Administrator';
 
                 toast.warning(
-                    `Evaluation already exists for ${employeeName} for ${monthName} ${newData.year} by ${roleName}`,
-                    { autoClose: 3000 }
-                );
-            }
-        }
-    };
-
-    const handleEvaluatorRoleChange = (newRole) => {
-        const newData = { ...evaluationData, evaluatorRole: newRole };
-        setEvaluationData(newData);
-
-        if (selectedEmployee) {
-            const existing = checkExistingEvaluation(
-                selectedEmployee,
-                newData.month,
-                newData.year,
-                newRole
-            );
-            setExistingEvaluationData(existing);
-
-            // Show warning if evaluation exists for new role
-            if (existing) {
-                const employee = employees.find(emp => (emp.id || emp._id) === selectedEmployee);
-                const employeeName = employee ?
-                    (employee.name || employee.fullName || `${employee.firstName || ''} ${employee.lastName || ''}`.trim())
-                    : 'Selected Employee';
-                const monthName = months.find(m => m.value === newData.month)?.label || 'Unknown Month';
-                const roleName = newRole === 'hr' ? 'HR Manager' : 'Administrator';
-
-                toast.warning(
-                    `Evaluation already exists for ${employeeName} for ${monthName} ${newData.year} by ${roleName}`,
+                    `Evaluation already exists for ${employeeName} for ${monthName} ${newData.year}`,
                     { autoClose: 3000 }
                 );
             }
@@ -279,10 +247,6 @@ const Evaluations = () => {
             errors.push('Please select a year');
         }
 
-        if (!evaluationData.evaluatorRole) {
-            errors.push('Please select evaluator role');
-        }
-
         // Check if all grades are provided
         const missingGrades = Object.entries(evaluationData.grades)
             .filter(([key, value]) => !value)
@@ -313,16 +277,14 @@ const Evaluations = () => {
         const existingEval = checkExistingEvaluation(
             selectedEmployee,
             evaluationData.month,
-            evaluationData.year,
-            evaluationData.evaluatorRole
+            evaluationData.year
         );
 
         if (existingEval) {
             const monthName = months.find(m => m.value === evaluationData.month)?.label || 'Unknown Month';
-            const roleName = evaluationData.evaluatorRole === 'hr' ? 'HR Manager' : 'Administrator';
 
             toast.error(
-                `Evaluation already exists for ${employeeName} for ${monthName} ${evaluationData.year} by ${roleName}`,
+                `Evaluation already exists for ${employeeName} for ${monthName} ${evaluationData.year}`,
                 { autoClose: 5000 }
             );
             return;
@@ -340,12 +302,11 @@ const Evaluations = () => {
                 overallGrade: overallResult.grade,
                 overallGPA: parseFloat(overallResult.gpa),
                 evaluationDate: new Date().toISOString(),
+                evaluatorRole: 'hr',
                 createdAt: new Date().toISOString()
             };
 
-            console.log('Submitting evaluation:', evaluationPayload); // Debug log
-
-            const response = await fetch('https://backend-software-management.onrender.com/api/evaluations/create', {
+            const response = await fetch('https://plexus-backend-software2.onrender.com/api/evaluations/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(evaluationPayload)
@@ -363,8 +324,7 @@ const Evaluations = () => {
                     employeeName: '',
                     month: new Date().getMonth() + 1,
                     year: new Date().getFullYear(),
-                    evaluatorRole: 'hr',
-                    grades: { work: '', leave: '', time: '', behaviour: '' }
+                    grades: { work: '', speed: '', overall: '', leave: '', time: '', behaviour: '' }
                 });
 
                 // Refresh evaluations list
@@ -432,7 +392,7 @@ const Evaluations = () => {
 
     return (
         // bg-gradient-to-br from-indigo-50 via-white to-cyan-0
-        <div className="min-h-screen  p-4 sm:p-6 rounded-2xl"> 
+        <div className="min-h-screen  p-4 sm:p-6 rounded-2xl">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className=" mb-8">
@@ -502,20 +462,7 @@ const Evaluations = () => {
                                         </select>
                                     </div>
 
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            Evaluator Role <span className="text-red-500">*</span>
-                                        </label>
-                                        <select
-                                            value={evaluationData.evaluatorRole}
-                                            onChange={(e) => handleEvaluatorRoleChange(e.target.value)}
-                                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                                            required
-                                        >
-                                            <option value="hr">HR Manager</option>
-                                            <option value="admin">Administrator</option>
-                                        </select>
-                                    </div>
+
                                 </div>
 
                                 {/* Existing Evaluation Warning */}
@@ -598,7 +545,7 @@ const Evaluations = () => {
                                                 <div className={`w-16 h-16 rounded-full ${getGradeStyle(overall.grade).color} text-white font-bold flex items-center justify-center text-2xl mx-auto mb-2`}>
                                                     {overall.grade}
                                                 </div>
-                                                <p className="text-gray-600">GPA: {overall.gpa}</p>
+                                                {/* <p className="text-gray-600">GPA: {overall.gpa}</p> */}
                                             </div>
                                         ) : null;
                                     })()}

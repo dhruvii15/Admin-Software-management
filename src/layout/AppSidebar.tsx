@@ -11,7 +11,7 @@ import {
 
 import logo from "../assest/logo.svg"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPerson, faUser, faChartLine, faWallet, faFileSignature } from '@fortawesome/free-solid-svg-icons';
+import { faPerson, faUser, faChartLine, faWallet, faFileSignature, faFile, faGripVertical, faPersonCirclePlus, faImage } from '@fortawesome/free-solid-svg-icons';
 
 type NavItem = {
   name: string;
@@ -22,44 +22,72 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    icon: <GridIcon />,
+    icon: <FontAwesomeIcon icon={faGripVertical} />,
     name: "Dashboard",
     path: "/",
   },
   {
+    icon: <FontAwesomeIcon icon={faPersonCirclePlus} />,
+    name: "Open-Position",
+    path: "/website/position",
+  },
+  {
+    icon: <FontAwesomeIcon icon={faFile} />,
+    name: "Portfolio",
+    path: "/website/portfolio",
+  },
+  {
+    icon: <FontAwesomeIcon icon={faImage} />,
+    name: "Culture",
+    path: "/website/culture",
+  },
+];
+
+
+const settingItems: NavItem[] = [
+  {
+    icon: <FontAwesomeIcon icon={faGripVertical} />,
+    name: "Dashboard",
+    path: "/management/dashboard",
+  },
+  {
     icon: <FontAwesomeIcon icon={faPerson} />,
     name: "Employee Data",
-    path: "/employee/data",
+    path: "/management/employee/data",
   },
   {
     icon: <FontAwesomeIcon icon={faUser} />,
     name: "Hiring Data",
-    path: "/hiring/data",
+    path: "/management/hiring/data",
   },
   {
     icon: <FontAwesomeIcon icon={faChartLine} />,
     name: "Increment",
-    path: "/increment",
+    path: "/management/increment",
   },
   {
     icon: <FontAwesomeIcon icon={faWallet} />,
     name: "Salary",
-    path: "/salary",
+    path: "/management/salary",
+  },
+  {
+    icon: <FontAwesomeIcon icon={faWallet} />,
+    name: "Leave",
+    path: "/management/leave",
   },
   {
     icon: <FontAwesomeIcon icon={faFileSignature} />,
     name: "Letters",
-    path: "/letters",
+    path: "/management/letters",
   }
 ];
-
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
 
   const [openSubmenu, setOpenSubmenu] = useState<{
-    type: "main" | "management";
+    type: "main" | "second";
     index: number;
   } | null>(null);
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
@@ -74,15 +102,17 @@ const AppSidebar: React.FC = () => {
 
   useEffect(() => {
     let submenuMatched = false;
-    ["main", "management"].forEach((menuType) => {
-      const items = navItems
-        
+    ["main", "second"].forEach((menuType) => {
+      const items =
+        menuType === "main" ? navItems :
+          settingItems;
+
       items.forEach((nav, index) => {
         if (nav.subItems) {
           nav.subItems.forEach((subItem) => {
             if (isActive(subItem.path)) {
               setOpenSubmenu({
-                type: menuType as "main",
+                type: menuType as "main" | "second",
                 index,
               });
               submenuMatched = true;
@@ -109,7 +139,7 @@ const AppSidebar: React.FC = () => {
     }
   }, [openSubmenu]);
 
-  const handleSubmenuToggle = (index: number, menuType: "main") => {
+  const handleSubmenuToggle = (index: number, menuType: "main" | "second") => {
     setOpenSubmenu((prevOpenSubmenu) => {
       if (
         prevOpenSubmenu &&
@@ -122,7 +152,7 @@ const AppSidebar: React.FC = () => {
     });
   };
 
-  const renderMenuItems = (items: NavItem[], menuType: "main") => (
+  const renderMenuItems = (items: NavItem[], menuType: "main" | "second") => (
     <ul className="flex flex-col gap-4">
       {items.map((nav, index) => (
         <li key={nav.name}>
@@ -275,12 +305,28 @@ const AppSidebar: React.FC = () => {
                   }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Data"
+                  "Website"
                 ) : (
                   <HorizontaLDots />
                 )}
               </h2>
               {renderMenuItems(navItems, "main")}
+            </div>
+
+            <div className="">
+              <h2
+                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered
+                  ? "lg:justify-center"
+                  : "justify-start"
+                  }`}
+              >
+                {isExpanded || isHovered || isMobileOpen ? (
+                  "Management"
+                ) : (
+                  <HorizontaLDots />
+                )}
+              </h2>
+              {renderMenuItems(settingItems, "second")}
             </div>
           </div>
         </nav>

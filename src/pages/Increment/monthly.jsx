@@ -41,7 +41,7 @@ const Monthly = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await fetch("https://backend-software-management.onrender.com/api/evaluations/read");
+            const response = await fetch("https://plexus-backend-software2.onrender.com/api/evaluations/read");
             const data = await response.json();
             if (data) {
                 setEvaluations(data.data);
@@ -68,6 +68,16 @@ const Monthly = () => {
         }
     };
 
+    const numberToGrade = (number) => {
+        switch (number) {
+            case 4: return 'A';
+            case 3: return 'B';
+            case 2: return 'C';
+            case 1: return 'D';
+            default: return 'No Grade';
+        }
+    };
+
     const processChartData = () => {
         const filteredData = evaluations.filter(item => parseInt(item.year) === selectedYear);
         const employeeData = {};
@@ -82,11 +92,9 @@ const Monthly = () => {
         Object.keys(employeeData).forEach(employeeName => {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const hrData = [];
-            const adminData = [];
             for (let month = 1; month <= 12; month++) {
                 const monthStr = month.toString();
                 hrData.push(employeeData[employeeName][monthStr]?.hr || 0);
-                adminData.push(employeeData[employeeName][monthStr]?.admin || 0);
             }
             processedData[employeeName] = {
                 labels: months,
@@ -102,23 +110,29 @@ const Monthly = () => {
                         hoverBackgroundColor: isDarkMode ? 'rgba(191, 131, 255, 0.95)' : 'rgba(139, 69, 255, 0.85)',
                         hoverBorderColor: isDarkMode ? 'rgba(191, 131, 255, 1)' : 'rgba(139, 69, 255, 1)',
                         hoverBorderWidth: 3
-                    },
-                    {
-                        label: 'Admin Evaluation',
-                        data: adminData,
-                        backgroundColor: isDarkMode ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 0.7)',
-                        borderColor: isDarkMode ? 'rgba(34, 197, 94, 1)' : 'rgba(22, 163, 74, 1)',
-                        borderWidth: 2,
-                        borderRadius: 8,
-                        borderSkipped: false,
-                        hoverBackgroundColor: isDarkMode ? 'rgba(34, 197, 94, 0.95)' : 'rgba(22, 163, 74, 0.85)',
-                        hoverBorderColor: isDarkMode ? 'rgba(34, 197, 94, 1)' : 'rgba(22, 163, 74, 1)',
-                        hoverBorderWidth: 3
                     }
                 ]
             };
         });
         setChartData(processedData);
+    };
+
+    const getEmployeeGradeSummary = (employeeName) => {
+        const filteredData = evaluations.filter(item => 
+            parseInt(item.year) === selectedYear && 
+            item.employeeName === employeeName &&
+            item.evaluatorRole === 'hr'
+        );
+        
+        const gradeCounts = { A: 0, B: 0, C: 0, D: 0 };
+        
+        filteredData.forEach(item => {
+            if (item.overallGrade && ['A', 'B', 'C', 'D'].includes(item.overallGrade)) {
+                gradeCounts[item.overallGrade]++;
+            }
+        });
+        
+        return gradeCounts;
     };
 
     const getEmployeeStats = () => {
@@ -323,27 +337,51 @@ const Monthly = () => {
                     </div>
                 )}
 
-
                 <div className="space-y-8">
-                    {Object.keys(chartData).map(employeeName => (
-                        <div key={employeeName} className="bg-white dark:bg-[#1F2635] rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-8 border border-gray-100 dark:border-gray-700">
-                            <div className="mb-6">
-                                <h2 className="text-2xl font-bold text-[#0777AB] dark:text-purple-400 mb-2 capitalize">
-                                    {employeeName}
-                                </h2>
-                                <p className="text-gray-600 dark:text-gray-400 font-medium">
-                                    Performance Overview - {selectedYear}
-                                </p>
-                            </div>
+                    {Object.keys(chartData).map(employeeName => {
+                        const gradeSummary = getEmployeeGradeSummary(employeeName);
+                        
+                        return (
+                            <div key={employeeName} className="bg-white dark:bg-[#1F2635] rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-8 border border-gray-100 dark:border-gray-700">
+                                <div className="mb-6">
+                                    <h2 className="text-2xl font-bold text-[#0777AB] dark:text-purple-400 mb-2 capitalize">
+                                        {employeeName}
+                                    </h2>
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                        <p className="text-gray-600 dark:text-gray-400 font-medium">
+                                            Performance Overview - {selectedYear}
+                                        </p>
+                                        
+                                        {/* Grade Summary */}
+                                        <div className="flex items-center space-x-4 text-sm">
+                                            <span className="text-gray-600 dark:text-gray-400 font-medium">Grade Summary:</span>
+                                            <div className="flex space-x-3">
+                                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-md font-semibold">
+                                                    A: {gradeSummary.A}
+                                                </span>
+                                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md font-semibold">
+                                                    B: {gradeSummary.B}
+                                                </span>
+                                                <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-md font-semibold">
+                                                    C: {gradeSummary.C}
+                                                </span>
+                                                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-md font-semibold">
+                                                    D: {gradeSummary.D}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <div className="h-96">
-                                <Bar
-                                    data={chartData[employeeName]}
-                                    options={getChartOptions(employeeName)}
-                                />
+                                <div className="h-96">
+                                    <Bar
+                                        data={chartData[employeeName]}
+                                        options={getChartOptions(employeeName)}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     {Object.keys(chartData).length === 0 && (
                         <div className="bg-white dark:bg-[#1F2635] rounded-xl shadow-lg p-12 text-center border border-gray-100 dark:border-gray-700">
@@ -362,11 +400,8 @@ const Monthly = () => {
 
             </div>
 
-            <ToastContainer
-                position="top-center"
-                className="!z-[99999]"
-                toastClassName="!bg-white dark:!bg-gray-800 !text-gray-800 dark:!text-gray-200 !shadow-lg !border !border-gray-200 dark:!border-gray-600"
-            />
+            <ToastContainer position="top-center" className="!z-[99999]" />
+
         </div>
     );
 };
