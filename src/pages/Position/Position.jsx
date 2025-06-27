@@ -48,7 +48,7 @@ const OpenPosition = () => {
             .catch((err) => {
                 console.error(err);
                 setLoading(false);
-                toast.error("Failed to fetch data.");
+                // toast.error("Failed to fetch data.");
             });
     };
 
