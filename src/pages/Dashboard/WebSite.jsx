@@ -54,7 +54,7 @@ const DashWeb = () => {
             })
             .catch(() => {
                 setLoading(false);
-                toast.error("Position data not found");
+                // toast.error("Position data not found");
             });
     };
 
