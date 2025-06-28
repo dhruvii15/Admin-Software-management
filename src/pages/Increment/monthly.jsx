@@ -41,7 +41,7 @@ const Monthly = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await fetch("https://plexus-backend-software2.onrender.com/api/evaluations/read");
+            const response = await fetch("https://api.pslink.world/api/plexus/evaluations/read");
             const data = await response.json();
             if (data) {
                 setEvaluations(data.data);

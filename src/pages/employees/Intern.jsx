@@ -68,7 +68,7 @@ const Intern = () => {
         try {
             setLoading(true);
             // Replace with your intern API endpoint
-            const response = await axios.get('https://plexus-backend-software2.onrender.com/api/employee/intern/read');
+            const response = await axios.get('https://api.pslink.world/api/plexus/employee/intern/read');
             setFilteredData(response.data.data);
         } catch (err) {
             console.error(err);
@@ -141,8 +141,8 @@ const Intern = () => {
             setIsSubmitting(true);
             // Replace with your intern API endpoints
             const endpoint = id
-                ? `https://plexus-backend-software2.onrender.com/api/employee/intern/update/${id}`
-                : 'https://plexus-backend-software2.onrender.com/api/employee/intern/create';
+                ? `https://api.pslink.world/api/plexus/employee/intern/update/${id}`
+                : 'https://api.pslink.world/api/plexus/employee/intern/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formData);
@@ -194,7 +194,7 @@ const Intern = () => {
             try {
                 setIsSubmitting(true);
                 // Replace with your intern API endpoint
-                const response = await axios.delete(`https://plexus-backend-software2.onrender.com/api/employee/intern/delete/${id}`);
+                const response = await axios.delete(`https://api.pslink.world/api/plexus/employee/intern/delete/${id}`);
                 toast.success(response.data.message || 'Intern deleted successfully!');
                 getData();
             } catch (err) {

@@ -6,6 +6,8 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
 
 const Employees = () => {
     const [visible, setVisible] = useState(false);
@@ -93,7 +95,7 @@ const Employees = () => {
         try {
             setLoading(true);
             // Replace with your employee API endpoint
-            const response = await axios.get('https://plexus-backend-software2.onrender.com/api/employee/read');
+            const response = await axios.get('https://api.pslink.world/api/plexus/employee/read');
             setFilteredData(response.data.data);
             const data = response.data.data
             const uniquePositions = [...new Set(data.map(item => item.position).filter(Boolean))];
@@ -233,8 +235,8 @@ const Employees = () => {
             });
 
             const endpoint = id
-                ? `https://plexus-backend-software2.onrender.com/api/employee/update/${id}`
-                : 'https://plexus-backend-software2.onrender.com/api/employee/create';
+                ? `https://api.pslink.world/api/plexus/employee/update/${id}`
+                : 'https://api.pslink.world/api/plexus/employee/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formDataToSend, {
@@ -297,7 +299,7 @@ const Employees = () => {
             try {
                 setIsSubmitting(true);
                 // Replace with your employee API endpoint
-                const response = await axios.delete(`https://plexus-backend-software2.onrender.com/api/employee/delete/${id}`);
+                const response = await axios.delete(`https://api.pslink.world/api/plexus/employee/delete/${id}`);
                 toast.success(response.data.message);
                 getData();
             } catch (err) {
@@ -378,24 +380,30 @@ const Employees = () => {
                                                 <TableCell className="text-center px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {index + 1}
                                                 </TableCell>
-                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200 w-20">
+                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200 w-24">
                                                     {employee.photos && employee.photos.length > 0 ? (
-                                                        (() => {
-                                                            const randomIndex = Math.floor(Math.random() * employee.photos.length);
-                                                            const randomPhoto = employee.photos[randomIndex];
-                                                            const photoUrl = typeof randomPhoto === 'string' ? randomPhoto : randomPhoto.preview;
-
-                                                            return (
-                                                                <div className="w-12 h-12 mx-auto">
-                                                                    <img
-                                                                        src={photoUrl}
-                                                                        alt="Random Employee"
-                                                                        className="w-12 h-12 object-cover rounded-full cursor-pointer border border-gray-300 shadow bg-gray-200"
-                                                                        onClick={() => window.open(photoUrl, '_blank')}
-                                                                    />
-                                                                </div>
-                                                            );
-                                                        })()
+                                                        <div className="w-12 h-12 mx-auto">
+                                                            <Swiper
+                                                                spaceBetween={5}
+                                                                slidesPerView={1}
+                                                                loop={true}
+                                                                autoplay={{ delay: 100 }}
+                                                            >
+                                                                {employee.photos.map((photo, index) => {
+                                                                    const photoUrl = typeof photo === 'string' ? photo : photo.preview;
+                                                                    return (
+                                                                        <SwiperSlide key={index}>
+                                                                            <img
+                                                                                src={photoUrl}
+                                                                                alt={`Employee ${index}`}
+                                                                                className="w-12 h-12 object-cover rounded-full cursor-pointer border border-gray-300 shadow bg-gray-200"
+                                                                                onClick={() => window.open(photoUrl, '_blank')}
+                                                                            />
+                                                                        </SwiperSlide>
+                                                                    );
+                                                                })}
+                                                            </Swiper>
+                                                        </div>
                                                     ) : (
                                                         '-'
                                                     )}
@@ -816,8 +824,8 @@ const Employees = () => {
                                                         <div
                                                             key={num}
                                                             className={`w-2 h-2 rounded-full ${num <= formData.photos.length
-                                                                    ? 'bg-blue-500'
-                                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                                ? 'bg-blue-500'
+                                                                : 'bg-gray-300 dark:bg-gray-600'
                                                                 }`}
                                                         />
                                                     ))}

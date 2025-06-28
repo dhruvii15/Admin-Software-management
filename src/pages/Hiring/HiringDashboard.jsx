@@ -41,7 +41,7 @@ const HiringDashboard = () => {
     const getData = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await axios.get('https://plexus-backend-software2.onrender.com/api/hiring/read');
+            const response = await axios.get('https://api.pslink.world/api/plexus/hiringresume/read');
             const data = response.data.data;
 
             setFilteredData(data);

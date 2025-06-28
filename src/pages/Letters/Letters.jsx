@@ -160,18 +160,18 @@ const Letters = () => {
 
         try {
             // Add Myriad Pro font
-            const fontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-REGULAR.ttf`);
+            const fontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-REGULAR.ttf`);
             doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
             doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
 
-            const boldFontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-BOLD.ttf`);
+            const boldFontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-BOLD.ttf`);
             doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
             doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
 
             // Set default font
             doc.setFont("MyriadPro");
 
-            const bgBase64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/experienceletter.png`);
+            const bgBase64 = await getBase64FromUrl(`http://localhost:3000/experienceletter.png`);
             doc.addImage(bgBase64, 'PNG', 0, 0, 210, 297);
 
             doc.setFontSize(14);
@@ -287,7 +287,7 @@ const Letters = () => {
 
             // ----- Paragraph 3 -----
             doc.setFont("MyriadPro", "normal");
-            const para3 = `He has a friendly, outgoing personality, very good sense of humour and works well as an individual or member of a team as required by the management. The only one reason for his removal from the company is that he took too many Leaves.`;
+            const para3 = `He has a friendly, outgoing personality, very good sense of humour and works well as an individual or member of a team as required by the management.`;
             const splitPara3 = doc.splitTextToSize(para3, 170);
             splitPara3.forEach(line => {
                 doc.text(line, 18, y);
@@ -297,9 +297,18 @@ const Letters = () => {
             y += 10;
 
             // Signature
-            doc.setFontSize(12);
+            doc.setFontSize(11);
             doc.setFont("MyriadPro", "bold");
-            doc.text(`${employeeName}`, 153, y += 47);
+            const textWidth = doc.getTextWidth(employeeName);
+            const underlineWidth = textWidth + 10; 
+            const xCenter = 153;
+            const underlineX = xCenter - (underlineWidth / 2);
+            const underlineY = y + 48; // 2 units niche underline
+            doc.text(employeeName, xCenter, y += 54, { align: "center" });
+            doc.setDrawColor(0); // black color
+            doc.setLineWidth(0.3);
+            doc.line(underlineX, underlineY, underlineX + underlineWidth, underlineY);
+
 
             doc.save("Experience-Letter.pdf");
         } catch (error) {
@@ -326,18 +335,18 @@ const Letters = () => {
         const formattedstartdate = formatDate(startdate);
         try {
             // Add Myriad Pro font
-            const fontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-REGULAR.ttf`);
+            const fontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-REGULAR.ttf`);
             doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
             doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
 
-            const boldFontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-BOLD.ttf`);
+            const boldFontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-BOLD.ttf`);
             doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
             doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
 
             // Set default font
             doc.setFont("MyriadPro");
 
-            const bgBase64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/internshipoffer.png`);
+            const bgBase64 = await getBase64FromUrl(`http://localhost:3000/internshipoffer.png`);
             doc.addImage(bgBase64, 'PNG', 0, 0, 210, 297);
 
             doc.setFontSize(14);
@@ -456,18 +465,18 @@ const Letters = () => {
 
         try {
             // Add Myriad Pro font
-            const fontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-REGULAR.ttf`);
+            const fontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-REGULAR.ttf`);
             doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
             doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
 
-            const boldFontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-BOLD.ttf`);
+            const boldFontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-BOLD.ttf`);
             doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
             doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
 
             // Set default font
             doc.setFont("MyriadPro");
 
-            const bgBase64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/internshipcertificate.png`);
+            const bgBase64 = await getBase64FromUrl(`http://localhost:3000/internshipcertificate.png`);
             doc.addImage(bgBase64, 'PNG', 0, 0, 210, 297);
 
             doc.setFontSize(14);
@@ -585,11 +594,11 @@ const Letters = () => {
 
         try {
             // Add Myriad Pro font
-            const fontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-REGULAR.ttf`);
+            const fontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-REGULAR.ttf`);
             doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
             doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
 
-            const boldFontBase64 = await getBase64FromUrl2(`https://admin-software-management.vercel.app/MYRIADPRO-BOLD.ttf`);
+            const boldFontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-BOLD.ttf`);
             doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
             doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
 
@@ -738,39 +747,39 @@ const Letters = () => {
 
 
             // PAGE 1 - Add background and internship content
-            const bg1Base64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/1.png`);
+            const bg1Base64 = await getBase64FromUrl(`http://localhost:3000/1.png`);
             doc.addImage(bg1Base64, 'PNG', 0, 0, 210, 297);
             doc.setFont("MyriadPro");
             addInternshipContent();
 
             // PAGE 2 - Add background image only
             doc.addPage();
-            const bg2Base64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/2.png`);
+            const bg2Base64 = await getBase64FromUrl(`http://localhost:3000/2.png`);
             doc.addImage(bg2Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 3 - Add background image only
             doc.addPage();
-            const bg3Base64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/3.png`);
+            const bg3Base64 = await getBase64FromUrl(`http://localhost:3000/3.png`);
             doc.addImage(bg3Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 4 - Add background image only
             doc.addPage();
-            const bg4Base64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/4.png`);
+            const bg4Base64 = await getBase64FromUrl(`http://localhost:3000/4.png`);
             doc.addImage(bg4Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 5 - Add background image only
             doc.addPage();
-            const bg5Base64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/5.png`);
+            const bg5Base64 = await getBase64FromUrl(`http://localhost:3000/5.png`);
             doc.addImage(bg5Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 6 - Add background image only
             doc.addPage();
-            const bg6Base64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/6.png`);
+            const bg6Base64 = await getBase64FromUrl(`http://localhost:3000/6.png`);
             doc.addImage(bg6Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 7 - Add background and internship content
             doc.addPage();
-            const bg7Base64 = await getBase64FromUrl(`https://admin-software-management.vercel.app/7.png`);
+            const bg7Base64 = await getBase64FromUrl(`http://localhost:3000/7.png`);
             doc.addImage(bg7Base64, 'PNG', 0, 0, 210, 297);
             doc.setFont("MyriadPro");
             addInternshipContent2();

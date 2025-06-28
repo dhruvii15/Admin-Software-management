@@ -87,7 +87,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('https://plexus-backend-software2.onrender.com/api/hiring/read');
+      const response = await fetch('https://api.pslink.world/api/plexus/hiringresume/read');
       const data = await response.json();
 
       const tomorrow = new Date();
@@ -143,7 +143,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('https://plexus-backend-software2.onrender.com/api/leave/read');
+      const response = await fetch('https://api.pslink.world/api/plexus/leave/read');
       const data = await response.json();
 
       const tomorrow = new Date();
@@ -187,7 +187,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('https://plexus-backend-software2.onrender.com/api/evaluations/read');
+      const response = await fetch('https://api.pslink.world/api/plexus/evaluations/read');
       const data = await response.json();
 
       const currentDate = new Date();
@@ -273,7 +273,7 @@ export default function Ecommerce() {
 
 
       // Call delete API with array of IDs
-      const response = await axios.delete(`https://plexus-backend-software2.onrender.com/api/leave/multy`, {
+      const response = await axios.delete(`https://api.pslink.world/api/plexus/leave/multy`, {
         data: { ids: leaveIds }
       });
 

@@ -103,7 +103,7 @@ const Salary = () => {
         try {
             setLoading(true);
             // Replace with your salary API endpoint
-            const response = await axios.get('https://plexus-backend-software2.onrender.com/api/employee/salary/read');
+            const response = await axios.get('https://api.pslink.world/api/plexus/employee/salary/read');
             const data = response.data.data;
             setOriginalData(data);
             setFilteredData(data);
@@ -237,8 +237,8 @@ const Salary = () => {
 
             // Replace with your salary API endpoints
             const endpoint = id
-                ? `https://plexus-backend-software2.onrender.com/api/employee/salary/update/${id}`
-                : 'https://plexus-backend-software2.onrender.com/api/employee/salary/create';
+                ? `https://api.pslink.world/api/plexus/employee/salary/update/${id}`
+                : 'https://api.pslink.world/api/plexus/employee/salary/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formDataToSend, {
@@ -293,7 +293,7 @@ const Salary = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this salary record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`https://plexus-backend-software2.onrender.com/api/employee/salary/delete/${id}`);
+                const response = await axios.delete(`https://api.pslink.world/api/plexus/employee/salary/delete/${id}`);
                 toast.success(response.data.message || 'Salary deleted successfully!');
                 getData();
             } catch (err) {
@@ -336,7 +336,7 @@ const Salary = () => {
             setIsUpdatingEmployee(true);
 
             // Call update API
-            const response = await axios.patch(`https://plexus-backend-software2.onrender.com/api/employee/salary/update/${id}`, {
+            const response = await axios.patch(`https://api.pslink.world/api/plexus/employee/salary/update/${id}`, {
                 remark: employeeRemark,
                 name: employeename
             });
@@ -831,6 +831,7 @@ const Salary = () => {
                                             </td><td className="px-6 py-4 text-center border-b border-gray-200">
                                                 <span
                                                     className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${employee.absent > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'} cursor-pointer relative group`}
+                                                // title={employee.remark}
                                                 >
                                                     <i className="fas fa-times mr-1"></i>
                                                     {employee.absent}
@@ -842,11 +843,13 @@ const Salary = () => {
 
                                                     {/* Remark tooltip on hover */}
                                                     {employee.remark && (
-                                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none">
+                                                        <div className="absolute bottom-full min-w-52 left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-pre-wrap z-50 pointer-events-none">
                                                             {employee.remark}
-                                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
                                                         </div>
                                                     )}
+
+
                                                 </span>
                                             </td>
 
