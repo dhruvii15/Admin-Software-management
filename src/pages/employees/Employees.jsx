@@ -143,7 +143,6 @@ const Employees = () => {
         if (!formData.joindate) newErrors.joindate = 'Join date is required';
         if (!formData.phonenumber.trim()) newErrors.phonenumber = 'Phone number is required';
         if (!formData.email.trim()) newErrors.email = 'Email is required';
-        if (!formData.photos || formData.photos.length === 0) newErrors.photos = 'At least one photo is required'; // Add this line
 
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

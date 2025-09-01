@@ -31,6 +31,30 @@ const Salary = () => {
     const [employeeRemark, setEmployeeRemark] = useState("");
     const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false);
 
+    // Helper function to get month number for sorting
+    const getMonthNumber = (monthName) => {
+        const months = {
+            'January': 1, 'February': 2, 'March': 3, 'April': 4,
+            'May': 5, 'June': 6, 'July': 7, 'August': 8,
+            'September': 9, 'October': 10, 'November': 11, 'December': 12
+        };
+        return months[monthName] || 0;
+    };
+
+    // Function to sort data in descending order (latest first)
+    const sortDataDescending = (data) => {
+        return data.sort((a, b) => {
+            // First sort by year (descending)
+            const yearDiff = (b.year || 0) - (a.year || 0);
+            if (yearDiff !== 0) return yearDiff;
+
+            // If years are equal, sort by month (descending)
+            const monthA = getMonthNumber(a.month);
+            const monthB = getMonthNumber(b.month);
+            return monthB - monthA;
+        });
+    };
+
     // Add this useEffect to handle clicking outside the year filter dropdown
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -45,26 +69,29 @@ const Salary = () => {
         };
     }, []);
 
-    // Function to handle year selection - FIXED
+    // Function to handle year selection - UPDATED to maintain sort order
     const handleYearSelection = (year) => {
         setSelectedYear(year);
         setIsYearFilterOpen(false);
 
         // Filter the data based on selected year
+        let filtered;
         if (year === "" || year === "All Years") {
             // Show all data
-            setFilteredData(originalData);
+            filtered = [...originalData];
         } else {
             // Filter data by selected year
-            const filtered = originalData.filter(salary => {
+            filtered = originalData.filter(salary => {
                 if (year === "undefined") {
                     return !salary.year || salary.year === null || salary.year === undefined;
                 }
                 // Convert both to strings for comparison to handle number/string inconsistencies
                 return String(salary.year) === String(year);
             });
-            setFilteredData(filtered);
         }
+
+        // Apply descending sort to filtered data
+        setFilteredData(sortDataDescending(filtered));
     };
 
     // Generate year options (current year - 10 to current year + 1)
@@ -98,15 +125,19 @@ const Salary = () => {
         }
     };
 
-    // API calls - FIXED to store original data
+    // API calls - UPDATED to sort data in descending order
     const getData = async () => {
         try {
             setLoading(true);
             // Replace with your salary API endpoint
             const response = await axios.get('https://api.pslink.world/api/plexus/employee/salary/read');
             const data = response.data.data;
-            setOriginalData(data);
-            setFilteredData(data);
+
+            // Sort the data in descending order (latest first)
+            const sortedData = sortDataDescending([...data]);
+
+            setOriginalData(sortedData);
+            setFilteredData(sortedData);
         } catch (err) {
             console.error(err);
             toast.error("Failed to fetch salary data.");
@@ -370,11 +401,11 @@ const Salary = () => {
     // UPDATED CSV export to include total pay salary amount
     const exportToCSV = () => {
         const headers = ['Name', 'Present Days', 'Absent Days', 'Weekly Off', 'Total Days', 'Total Salary', 'Pay Salary', 'Cut Salary', 'Remark'];
-        
+
         // Calculate total pay salary
         const totalPaySalary = salaryData.reduce((sum, emp) => sum + (emp.paySalary || 0), 0);
         const totalSalaryAmount = salaryData.reduce((sum, emp) => sum + (emp.totalSalary || 0), 0);
-        
+
         const csvContent = [
             headers.join(','),
             ...salaryData.map(row => [
@@ -517,9 +548,14 @@ const Salary = () => {
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     <span className="text-sm font-semibold text-green-600">
                                                         <i className="fas fa-rupee-sign mr-1"></i>
-                                                        {Math.round(calculateTotalPaySalary(salary.employees))}
+                                                        {Math.round(
+                                                            salary.total
+                                                                ? salary.total
+                                                                : calculateTotalPaySalary(salary.employees)
+                                                        )}
                                                     </span>
                                                 </TableCell>
+
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {salary.pdf ? (
                                                         <button
@@ -755,7 +791,7 @@ const Salary = () => {
             )}
 
             {/* Employee Details Modal */}
-           {isOpen && (
+            {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-99999">
                     <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
                         {/* Header */}
@@ -941,7 +977,7 @@ const Salary = () => {
                                             </td>
                                         </tr>
                                     ))}
-                                    
+
                                     {/* Totals Row */}
                                     <tr className="bg-gray-100 dark:bg-gray-700 border-t-2 border-gray-300 dark:border-gray-600">
                                         <td className="px-6 py-4 border-b border-gray-200">
@@ -955,16 +991,16 @@ const Salary = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
-                                            
+
                                         </td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
-                                            
+
                                         </td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
-                                            
+
                                         </td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
-                                            
+
                                         </td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
                                             <span className="text-sm font-bold text-gray-900 dark:text-gray-200">
@@ -973,7 +1009,7 @@ const Salary = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
-                                            
+
                                         </td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
                                             <span className="text-sm font-bold text-green-600">
@@ -982,7 +1018,7 @@ const Salary = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
-                                            
+
                                         </td>
                                     </tr>
                                 </tbody>

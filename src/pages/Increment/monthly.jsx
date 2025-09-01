@@ -525,11 +525,7 @@ const Monthly = () => {
         }
     });
 
-    const stats = {
-        employeeCount: new Set(evaluations.map(item => item.employeeName)).size,
-        totalEvaluations: evaluations.length,
-        incompleteEvaluations: evaluations.filter(item => !isEvaluationComplete(item)).length
-    };
+
 
     if (loading) return (
         <div className="h-80 flex justify-center items-center">
@@ -542,27 +538,7 @@ const Monthly = () => {
     return (
         <div className="min-h-screen p-6" style={{ scrollBehavior: 'auto' }}>
             <div className="max-w-7xl mx-auto">
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Employees</p>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.employeeCount}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Evaluations</p>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalEvaluations}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Incomplete Evaluations</p>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.incompleteEvaluations}</p>
-                        </div>
-                    </div>
-                </div>
+                
 
                 {/* Year Selector */}
                 {Object.keys(chartData).length !== 0 && (

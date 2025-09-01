@@ -21,18 +21,18 @@ const Evaluations = () => {
     const [submitting, setSubmitting] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState('');
     const [existingEvaluationData, setExistingEvaluationData] = useState(null);
-    
+
     // Function to get previous month and year
     const getPreviousMonthAndYear = () => {
         const currentDate = new Date();
         const previousMonth = currentDate.getMonth(); // getMonth() returns 0-11, so current month - 1 gives us previous month
         const currentYear = currentDate.getFullYear();
-        
+
         // If current month is January (0), previous month should be December (12) of previous year
         if (previousMonth === 0) {
             return { month: 12, year: currentYear - 1 };
         }
-        
+
         return { month: previousMonth, year: currentYear };
     };
 
@@ -326,9 +326,9 @@ const Evaluations = () => {
                 body: JSON.stringify(evaluationPayload)
             });
 
-            if (response.ok) {
+            if (response) {
                 const result = await response.json();
-                toast.success(`Evaluation submitted successfully for ${employeeName}!`);
+                toast.success(`Evaluation submitted successfully`);
 
                 // Reset form with previous month as default
                 const { month: resetMonth, year: resetYear } = getPreviousMonthAndYear();
@@ -343,7 +343,9 @@ const Evaluations = () => {
                 });
 
                 // Refresh evaluations list
-                await fetchEvaluations();
+                setTimeout(async () => {
+                    await fetchEvaluations();
+                }, 2000);
             } else {
                 const err = await response.json();
                 toast.error(err.message || 'Failed to submit evaluation');
@@ -379,18 +381,18 @@ const Evaluations = () => {
                             // Prevent all default behaviors and scrolling
                             e.preventDefault();
                             e.stopPropagation();
-                            
+
                             // Store current scroll position
                             const currentScrollY = window.scrollY;
-                            
+
                             // Update the grade
                             onGradeChange(category, option.value);
-                            
+
                             // Restore scroll position immediately after state update
                             requestAnimationFrame(() => {
                                 window.scrollTo(0, currentScrollY);
                             });
-                            
+
                             // Additional fallback to maintain scroll position
                             setTimeout(() => {
                                 window.scrollTo(0, currentScrollY);
