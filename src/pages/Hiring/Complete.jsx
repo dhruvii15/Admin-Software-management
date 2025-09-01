@@ -8,7 +8,23 @@ import { Button } from "react-bootstrap";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faPlus, faTrash, faArrowUpFromBracket, faFileArrowUp, faEye, faArrowLeft, faUsers, faTimes, faSearch, faDownload } from "@fortawesome/free-solid-svg-icons";
+import {
+    faEdit,
+    faPlus,
+    faTrash,
+    faArrowUpFromBracket,
+    faFileArrowUp,
+    faEye,
+    faArrowLeft,
+    faUsers,
+    faTimes,
+    faSearch,
+    faDownload,
+    faCheck,
+    faXmark,
+    faClock,
+    faCheckCircle
+} from "@fortawesome/free-solid-svg-icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import CustomPagination from "../../components/common/pagination";
 
@@ -39,6 +55,11 @@ const Complete = () => {
     const [experienceFilter, setExperienceFilter] = useState('all');
     const [showExperienceDropdown, setShowExperienceDropdown] = useState(false);
     const experienceFilterRef = useRef(null);
+    const [showStatusModal, setShowStatusModal] = useState(false);
+    const [selectedItemForStatus, setSelectedItemForStatus] = useState(null);
+
+    // Add ref for status modal
+    const statusModalRef = useRef(null);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -53,6 +74,30 @@ const Complete = () => {
     const endIndex = startIndex + itemsPerPage;
     const currentPageData = filteredData.slice(startIndex, endIndex);
 
+    // Status configuration
+    const statusConfig = {
+        pending: {
+            icon: faClock,
+            color: '#f59e0b', // yellow-500
+            bgColor: '#fef3c7', // yellow-100
+            label: 'Pending',
+            darkBgColor: '#451a03' // yellow-900
+        },
+        approved: {
+            icon: faCheck,
+            color: '#10b981', // green-500
+            bgColor: '#d1fae5', // green-100
+            label: 'Approved',
+            darkBgColor: '#064e3b' // green-900
+        },
+        rejected: {
+            icon: faXmark,
+            color: '#ef4444', // red-500
+            bgColor: '#fee2e2', // red-100
+            label: 'Rejected',
+            darkBgColor: '#7f1d1d' // red-900
+        }
+    };
 
     // Add this function to handle page changes
     const handlePageChange = (page) => {
@@ -67,11 +112,216 @@ const Complete = () => {
         interviewdate: '',
         interviewtime: '',
         remark: '',
+        expectation: '',
         resume: '',
         reference: '',
         experience: '',
-        status: 'all'
+        status: 'all',
+        bond: false // Add this line
     });
+
+    // Function to handle status change
+    const handleStatusChange = async (itemId, newStatus) => {
+        if (isSubmitting) return;
+
+        try {
+            setIsSubmitting(true);
+
+            const response = await axios.patch(
+                `http://localhost:5005/api/plexus/hiringresume/update/${itemId}`,
+                { completestatus: newStatus },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            toast.success(`Status updated to ${statusConfig[newStatus]?.label || newStatus} successfully!`);
+
+            // Refresh data
+            await getData();
+
+        } catch (err) {
+            console.error('Error updating status:', err);
+            toast.error(err.response?.data?.message || "Failed to update status. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };// Helper function to parse experience value to numeric year
+    const parseExperienceToYear = (experienceStr) => {
+        if (!experienceStr) return 0;
+
+        const str = experienceStr.toLowerCase().trim();
+
+        // Handle "Fresher" case
+        if (str === 'fresher') return 0;
+
+        // Extract numeric value from strings like "1.5 year", "2 year", "0.5"
+        const match = str.match(/(\d+(?:\.\d+)?)/);
+        if (match) {
+            return parseFloat(match[1]);
+        }
+
+        return 0;
+    };
+
+    // Helper function to check if experience falls within a range
+    const isExperienceInRange = (experienceStr, filterRange) => {
+        const year = parseExperienceToYear(experienceStr);
+
+        switch (filterRange) {
+            case 'fresher':
+                return year === 0 || experienceStr.toLowerCase() === 'fresher';
+            case '0-1':
+                return year >= 0 && year <= 1;
+            case '1-2':
+                return year > 1 && year <= 2;
+            case '2-3':
+                return year > 2 && year <= 3;
+            case '3-4':
+                return year > 3 && year <= 4;
+            case '4-5':
+                return year > 4 && year <= 5;
+            default:
+                return true;
+        }
+    };
+
+    // Status Icon Component
+    const StatusIcon = ({ status, itemId, disabled }) => {
+        const config = statusConfig[status] || statusConfig.pending;
+
+        const handleStatusBadgeClick = (e) => {
+            e.preventDefault();
+            setSelectedItemForStatus({ id: itemId, currentStatus: status });
+            setShowStatusModal(true);
+        };
+
+        return (
+            <div className="flex items-center justify-center">
+                <button
+                    onClick={handleStatusBadgeClick}
+                    disabled={disabled}
+                    className={`text-xs font-medium px-3 py-2 rounded-full transition-all duration-200 hover:scale-105 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:shadow-md'
+                        }`}
+                    style={{
+                        backgroundColor: config.bgColor,
+                        color: config.color,
+                        border: `1px solid ${config.color}`
+                    }}
+                    title="Click to update status"
+                >
+                    {config.label}
+                </button>
+            </div>
+        );
+    };
+
+    const StatusUpdateModal = () => {
+        if (!showStatusModal || !selectedItemForStatus) return null;
+
+        const handleStatusUpdate = async (newStatus) => {
+            await handleStatusChange(selectedItemForStatus.id, newStatus);
+            setShowStatusModal(false);
+            setSelectedItemForStatus(null);
+        };
+
+        const handleModalClose = () => {
+            setShowStatusModal(false);
+            setSelectedItemForStatus(null);
+        };
+
+        // Handle click on modal backdrop (outside the modal content)
+        const handleBackdropClick = (e) => {
+            if (e.target === e.currentTarget) {
+                handleModalClose();
+            }
+        };
+
+        return (
+            <div
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-99999"
+                onClick={handleBackdropClick} // Add click handler for backdrop
+            >
+                <div
+                    ref={statusModalRef} // Add ref to modal content
+                    className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-90vw mx-4"
+                    onClick={(e) => e.stopPropagation()} // Prevent event bubbling when clicking inside modal
+                >
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            Update Status
+                        </h3>
+                        <button
+                            onClick={handleModalClose}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            disabled={isSubmitting}
+                        >
+                            <FontAwesomeIcon icon={faTimes} className="text-xl" />
+                        </button>
+                    </div>
+
+                    <p className="text-gray-600 dark:text-gray-300 mb-6">
+                        Select the status for this candidate:
+                    </p>
+
+                    <div className="space-y-3">
+                        {Object.entries(statusConfig).map(([statusKey, statusConf]) => {
+                            const isCurrentStatus = selectedItemForStatus.currentStatus === statusKey;
+
+                            return (
+                                <button
+                                    key={statusKey}
+                                    onClick={() => handleStatusUpdate(statusKey)}
+                                    disabled={isSubmitting || isCurrentStatus}
+                                    className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center gap-3 ${isCurrentStatus
+                                        ? 'cursor-not-allowed'
+                                        : 'hover:scale-[1.02] hover:shadow-md cursor-pointer'
+                                        } ${isSubmitting ? 'cursor-wait' : ''
+                                        }`}
+                                    style={{
+                                        backgroundColor: isCurrentStatus ? statusConf.bgColor : 'transparent',
+                                        borderColor: statusConf.color,
+                                        color: statusConf.color
+                                    }}
+                                >
+                                    <div
+                                        className="w-10 h-10 flex items-center justify-center rounded-full"
+                                        style={{
+                                            backgroundColor: statusConf.bgColor,
+                                            color: statusConf.color
+                                        }}
+                                    >
+                                        <FontAwesomeIcon icon={statusConf.icon} />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <div className="font-medium">{statusConf.label}</div>
+                                        {isCurrentStatus && (
+                                            <div className="text-xs opacity-75">Current Status</div>
+                                        )}
+                                    </div>
+                                    {isCurrentStatus && (
+                                        <FontAwesomeIcon icon={faCheckCircle} className="text-gray-500" />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                        <button
+                            onClick={handleModalClose}
+                            disabled={isSubmitting}
+                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     // Check if coming from dashboard with selected position or add mode
     useEffect(() => {
@@ -84,6 +334,7 @@ const Complete = () => {
         }
     }, [location.state]);
 
+    // Updated useEffect to include status modal click outside handling
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -101,28 +352,16 @@ const Complete = () => {
             if (dateFilterRef.current && !dateFilterRef.current.contains(event.target)) {
                 setShowDatePicker(false);
             }
+
+            // Handle status modal click outside - REMOVED because we're using backdrop click now
+            // The backdrop click method is more reliable and user-friendly
         };
 
-        if (isOpen2) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-
-        if (showExperienceDropdown) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-
-        if (showSuggestions) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-
-        if (showDatePicker) {
+        if (isOpen2 || showExperienceDropdown || showSuggestions || showDatePicker) {
             document.addEventListener("mousedown", handleClickOutside);
         }
 
         return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-            document.removeEventListener("mousedown", handleClickOutside);
-            document.removeEventListener("mousedown", handleClickOutside);
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [isOpen2, showExperienceDropdown, showSuggestions, showDatePicker]);
@@ -137,10 +376,12 @@ const Complete = () => {
                     interviewdate: '',
                     interviewtime: '',
                     remark: '',
+                    expectation: '',
                     resume: '',
                     reference: '',
                     experience: '',
-                    status: 'all'
+                    status: 'all',
+                    bond: false // Add this line
                 });
                 setId(undefined);
                 setSelectedFileName('');
@@ -247,7 +488,7 @@ const Complete = () => {
     const getData = useCallback(async (page = 1) => {
         try {
             setLoading(true);
-            const response = await axios.get('https://api.pslink.world/api/plexus/hiringresume/read');
+            const response = await axios.get('http://localhost:5005/api/plexus/hiringresume/read');
             const data = response.data.data;
 
             setOriginalData(data);
@@ -262,7 +503,9 @@ const Complete = () => {
 
             // Apply experience filter
             if (experienceFilter !== 'all') {
-                positionFilteredData = positionFilteredData.filter(item => item.experience === experienceFilter);
+                positionFilteredData = positionFilteredData.filter(item =>
+                    isExperienceInRange(item.experience, experienceFilter)
+                );
             }
 
             // Apply date filter
@@ -399,6 +642,17 @@ const Complete = () => {
         if (!formData.reference) newErrors.reference = 'Reference is required';
         if (!formData.experience.trim()) newErrors.experience = 'Experience is required';
 
+        // Validate experience format
+        if (formData.experience.trim()) {
+            const expStr = formData.experience.toLowerCase().trim();
+            if (expStr !== 'fresher') {
+                const regex = /^\d*\.?\d*\s*year?$/i;
+                if (!regex.test(expStr)) {
+                    newErrors.experience = 'Experience should be in format like "0.6 year", "1.5 year", "2 year", or "Fresher"';
+                }
+            }
+        }
+
         const phoneRegex = /^\d{10,15}$/;
         if (formData.phonenumber && !phoneRegex.test(formData.phonenumber.replace(/\D/g, ''))) {
             newErrors.phonenumber = 'Please enter a valid phone number';
@@ -426,11 +680,13 @@ const Complete = () => {
             submitData.append('reference', formData.reference);
             submitData.append('status', formData.status);
             submitData.append('experience', formData.experience);
+            submitData.append('bond', formData.bond); // Add this line
 
             const combinedDateTime = combineDateTime(formData.interviewdate, formData.interviewtime);
             submitData.append('interviewdate', combinedDateTime);
 
             submitData.append('remark', formData.remark);
+            submitData.append('expectation', formData.expectation);
 
             if (formData.resume instanceof File) {
                 submitData.append('resume', formData.resume);
@@ -439,8 +695,8 @@ const Complete = () => {
             }
 
             const endpoint = id
-                ? `https://api.pslink.world/api/plexus/hiringresume/update/${id}`
-                : 'https://api.pslink.world/api/plexus/hiringresume/create';
+                ? `http://localhost:5005/api/plexus/hiringresume/update/${id}`
+                : 'http://localhost:5005/api/plexus/hiringresume/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, submitData, {
@@ -468,10 +724,12 @@ const Complete = () => {
             interviewdate: '',
             interviewtime: '',
             remark: '',
+            expectation: '',
             resume: '',
             reference: '',
             experience: '',
-            status: 'all'
+            status: 'all',
+            bond: false // Add this line
         });
         setId(null);
         setErrors({});
@@ -492,9 +750,11 @@ const Complete = () => {
                 interviewtime: time,
                 remark: item.remark || '',
                 resume: item.resume || '',
+                expectation: item.expectation || '',
                 reference: item.reference || '',
                 experience: item.experience || '',
-                status: item.status || 'all'
+                status: item.status || 'all',
+                bond: item.bond || false // Add this line
             });
             setId(item._id);
             setVisible(true);
@@ -505,11 +765,12 @@ const Complete = () => {
         }
     };
 
+
     const handleDelete = async (id) => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this hiring record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`https://api.pslink.world/api/plexus/hiringresume/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5005/api/plexus/hiringresume/delete/${id}`);
                 toast.success(response.data.message || 'Hiring record deleted successfully!');
                 getData();
             } catch (err) {
@@ -600,7 +861,7 @@ const Complete = () => {
 
         // Apply experience filter
         if (experienceFilter !== 'all') {
-            baseData = baseData.filter(item => item.experience === experienceFilter);
+            baseData = baseData.filter(item => isExperienceInRange(item.experience, experienceFilter));
         }
 
         const dateFilteredData = filterDataByDate(baseData, dateFilter, customDateRange);
@@ -627,9 +888,6 @@ const Complete = () => {
 
     // Add this function to handle experience filter change
     const handleExperienceFilterChange = (experience) => {
-        console.log(searchTerm.trim());
-
-
         setExperienceFilter(experience);
         setShowExperienceDropdown(false);
 
@@ -639,7 +897,7 @@ const Complete = () => {
 
         // Apply experience filter
         if (experience !== 'all') {
-            baseData = baseData.filter(item => item.experience === experience);
+            baseData = baseData.filter(item => isExperienceInRange(item.experience, experience));
         }
 
         const dateFilteredData = filterDataByDate(baseData, dateFilter, customDateRange);
@@ -649,8 +907,6 @@ const Complete = () => {
             const searchFiltered = dateFilteredData.filter(item =>
                 item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())
             );
-            console.log(searchFiltered);
-
             setFilteredData(searchFiltered);
         } else {
             setFilteredData(dateFilteredData);
@@ -751,7 +1007,26 @@ const Complete = () => {
         </div>
     );
 
-    // Main component return statement પણ બાકી છે
+    const BondBadge = ({ hasBond }) => {
+        if (hasBond) {
+            return (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                    <FontAwesomeIcon icon={faCheck} className="mr-1" />
+                    Bond
+                </span>
+            );
+        } else {
+            return (
+                <span className="inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                    <FontAwesomeIcon icon={faXmark} className="mr-1" />
+                    No Bond
+                </span>
+
+            );
+        }
+    };
+
+    // Main component return statement
     return (
         <div>
             <div className="space-y-6 sticky left-0">
@@ -775,15 +1050,9 @@ const Complete = () => {
                                         {selectedPosition} ({filteredData.length})
                                     </span>
                                 )}
+
                             </div>
                             <div className="flex gap-3">
-                                {/* <button
-                                    onClick={exportSelectedData}
-                                    className="rounded-md border-0 shadow-md px-4 py-2 text-white transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]"
-                                    style={{ background: "#28a745" }}
-                                >
-                                    <FontAwesomeIcon icon={faDownload} className='pe-2' /> Export PDF
-                                </button> */}
                                 <button
                                     onClick={() => toggleModal('add')}
                                     className="rounded-md border-0 shadow-md px-4 py-2 text-white transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]"
@@ -880,7 +1149,13 @@ const Complete = () => {
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm">🎯</span>
                                                 <span className="text-sm">
-                                                    {experienceFilter === 'all' ? 'All Experience' : experienceFilter}
+                                                    {experienceFilter === 'all' ? 'All Experience' :
+                                                        experienceFilter === 'fresher' ? 'Fresher' :
+                                                            experienceFilter === '0-1' ? '0-1 Year' :
+                                                                experienceFilter === '1-2' ? '1-2 Year' :
+                                                                    experienceFilter === '2-3' ? '2-3 Year' :
+                                                                        experienceFilter === '3-4' ? '3-4 Year' :
+                                                                            experienceFilter === '4-5' ? '4-5 Year' : experienceFilter}
                                                 </span>
                                             </div>
                                             <svg className={`w-4 h-4 transition-transform ${showExperienceDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -897,16 +1172,48 @@ const Complete = () => {
                                                 >
                                                     All Experience
                                                 </button>
-                                                {getExperienceOptions().map((experience) => (
-                                                    <button
-                                                        key={experience}
-                                                        onClick={() => handleExperienceFilterChange(experience)}
-                                                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === experience ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
-                                                            }`}
-                                                    >
-                                                        {experience}
-                                                    </button>
-                                                ))}
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('fresher')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === 'fresher' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    Fresher
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('0-1')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '0-1' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    0-1 Year
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('1-2')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '1-2' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    1-2 Year
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('2-3')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '2-3' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    2-3 Year
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('3-4')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '3-4' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    3-4 Year
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('4-5')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '4-5' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    4-5 Year
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -937,7 +1244,10 @@ const Complete = () => {
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Experience</TableCell>
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Reference</TableCell>
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Remark</TableCell>
+                                                    <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Expectation</TableCell>
+                                                    <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Bond</TableCell>
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Resume</TableCell>
+                                                    <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Status</TableCell>
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Actions</TableCell>
                                                 </TableRow>
                                             </TableHeader>
@@ -949,7 +1259,7 @@ const Complete = () => {
                                                         .map((item, index) => (
                                                             <TableRow
                                                                 key={item._id}
-                                                                className="transform transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                                                className={`transform transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-800/50`}
                                                                 style={{
                                                                     animationDelay: `${index * 50}ms`,
                                                                     animation: 'fadeInLeft 0.4s ease-out forwards'
@@ -976,8 +1286,16 @@ const Complete = () => {
                                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                                     {item.reference}
                                                                 </TableCell>
-                                                                <TableCell className="py-3 px-2 w-64 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
+                                                                <TableCell className="py-3 px-2 w-72 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                                     {item.remark ? item.remark : '-'}
+                                                                </TableCell>
+                                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
+                                                                    {item.expectation ? item.expectation : '-'}
+                                                                </TableCell>
+                                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
+                                                                    <div className="flex justify-center">
+                                                                        <BondBadge hasBond={item.bond} />
+                                                                    </div>
                                                                 </TableCell>
                                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                                     {item.resume ? (
@@ -988,6 +1306,13 @@ const Complete = () => {
                                                                             <FontAwesomeIcon icon={faEye} className="text-lg" />
                                                                         </button>
                                                                     ) : '-'}
+                                                                </TableCell>
+                                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
+                                                                    <StatusIcon
+                                                                        status={item.completestatus || 'pending'}
+                                                                        itemId={item._id}
+                                                                        disabled={isSubmitting}
+                                                                    />
                                                                 </TableCell>
                                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                                     <div className="flex align-middle justify-center gap-4">
@@ -1012,8 +1337,8 @@ const Complete = () => {
                                                         ))
                                                 ) : (
                                                     <tr>
-                                                        <td colSpan={10} className="text-center pt-5 pb-4 dark:text-gray-200">
-                                                            No candidates found for {selectedPosition}
+                                                        <td colSpan={13} className="text-center pt-5 pb-4 dark:text-gray-200">
+                                                            {selectedPosition ? `No candidates found for ${selectedPosition}` : 'No candidates found'}
                                                         </td>
                                                     </tr>
                                                 )}
@@ -1026,6 +1351,10 @@ const Complete = () => {
                     </div>
                 </div>
             </div>
+
+            <StatusUpdateModal />
+
+
 
             {/* Modal for Add/Edit Candidate */}
             {visible && (
@@ -1176,34 +1505,32 @@ const Complete = () => {
                                         )}
                                     </div>
 
-                                    {/* Experience */}
+                                    {/* Experience - Changed to text input */}
                                     <div className="mb-4">
                                         <label className="block font-medium mb-2">
                                             Experience
+                                            <span className="text-red-500 pl-2 font-normal text-lg">*</span>
                                         </label>
-                                        <select
+                                        <input
+                                            type="text"
                                             name="experience"
                                             value={formData.experience}
                                             onChange={handleInputChange}
                                             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200 ${errors.experience ? 'border-red-500' : 'border-gray-300'
                                                 }`}
+                                            placeholder="e.g., 1.5 year, 2 year, or Fresher"
                                             disabled={isSubmitting}
-                                        >
-                                            <option value="">Select Experience</option>
-                                            <option value="Fresher">Fresher</option>
-                                            <option value="0-1">0-1 Years</option>
-                                            <option value="1-2">1-2 Years</option>
-                                            <option value="2-3">2-3 Years</option>
-                                            <option value="3-4">3-4 Years</option>
-                                            <option value="4-5">4-5 Years</option>
-                                        </select>
+                                        />
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            Enter experience in year (e.g., 0.5 year, 1.2 year, 3 year) or "Fresher"
+                                        </p>
                                         {errors.experience && (
                                             <p className="text-red-500 text-sm mt-1">{errors.experience}</p>
                                         )}
                                     </div>
 
                                     {/* Reference */}
-                                    <div className="mb-4 md:col-span-2">
+                                    <div className="mb-4">
                                         <label className="block font-medium mb-2">
                                             Reference
                                             <span className="text-red-500 pl-2 font-normal text-lg">*</span>
@@ -1223,6 +1550,40 @@ const Complete = () => {
                                         )}
                                     </div>
 
+                                    {/* Expectation */}
+                                    <div className="mb-4">
+                                        <label className="block font-medium mb-2">
+                                            Salary Expectation
+                                            <span className="text-white pl-2 font-normal text-lg">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="expectation"
+                                            value={formData.expectation}
+                                            onChange={handleInputChange}
+                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200 ${errors.expectation ? 'border-red-500' : 'border-gray-300'
+                                                }`}
+                                            placeholder="Enter salary expectation"
+                                            disabled={isSubmitting}
+                                        />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                name="bond"
+                                                checked={formData.bond}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, bond: e.target.checked }))}
+                                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                disabled={isSubmitting}
+                                            />
+                                            <span className="font-medium">Bond Agreement</span>
+                                        </label>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-7">
+                                            Check if candidate agrees to bond agreement
+                                        </p>
+                                    </div>
 
                                     {/* Remark */}
                                     <div className="mb-4 md:col-span-2">

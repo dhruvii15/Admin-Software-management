@@ -135,186 +135,184 @@ const Letters = () => {
         });
     };
 
-    const generatePDF = async () => {
-        const {
-            employeeName,
-            designation,
-            period,
-            periodstartDate,
-            periodendDate,
-            workstartDate,
-            workendDate,
-            companyname = "Plexus Technology Surat, Gujarat"
-        } = formData;
+   const generatePDF = async () => {
+    const {
+        employeeName,
+        designation,
+        period,
+        periodstartDate,
+        periodendDate,
+        workstartDate,
+        workendDate,
+        companyname = "Plexus Technology Surat, Gujarat"
+    } = formData;
 
-        const formattedperiodstartDate = formatDate(periodstartDate);
-        const formattedperiodendDate = formatDate(periodendDate);
-        const formattedworkstartDate = formatDate(workstartDate);
-        const formattedworkendDate = formatDate(workendDate);
+    const formattedperiodstartDate = formatDate(periodstartDate);
+    const formattedperiodendDate = formatDate(periodendDate);
+    const formattedworkstartDate = formatDate(workstartDate);
+    const formattedworkendDate = formatDate(workendDate);
 
-        const doc = new jsPDF({
-            orientation: "portrait",
-            unit: "mm",
-            format: "a4"
+    const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+    });
+
+    try {
+        // Add Myriad Pro font
+        const fontBase64 = await getBase64FromUrl2(`https://admin.plexus-technology.in/MYRIADPRO-REGULAR.ttf`);
+        doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
+        doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
+
+        const boldFontBase64 = await getBase64FromUrl2(`https://admin.plexus-technology.in/MYRIADPRO-BOLD.ttf`);
+        doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
+        doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
+
+        // Set default font
+        doc.setFont("MyriadPro");
+
+        const bgBase64 = await getBase64FromUrl(`https://admin.plexus-technology.in/experienceletter.png`);
+        doc.addImage(bgBase64, 'PNG', 0, 0, 210, 297);
+
+        doc.setFontSize(14);
+        doc.setFont("MyriadPro", "normal");
+        doc.text(`${formatDate(new Date())}`, 189, 36.5, { align: "center" });
+
+        doc.setFontSize(12);
+        let y = 80;
+
+        // Subject - Bold
+        doc.setFontSize(15);
+        doc.setFont("MyriadPro", "bold");
+        doc.text(`Subject: `, 18, y);
+        doc.setFont("MyriadPro", "normal");
+        doc.text(`Experience Of ${designation} at Plexus Technology.`, 38, y);
+        y += 15;
+
+        doc.setFontSize(14);
+        doc.setFont("MyriadPro", "bold");
+        doc.text(`Dear ${employeeName},`, 18, y);
+        y += 15;
+
+        // ----- Paragraph 1 with automatic line breaks -----
+        doc.setFont("MyriadPro", "normal");
+
+        // Create the complete paragraph text
+        const paragraph1 = `This is to Certify that ${employeeName} was working with ${companyname} India as ${designation} from ${formattedperiodstartDate} to ${formattedperiodendDate} as a ${period} and ${formattedworkstartDate} to ${formattedworkendDate} as a Full-time Employee per the personnel roles and company's employment record.`;
+
+        // Split text for width
+        const splitParagraph1 = doc.splitTextToSize(paragraph1, 170);
+
+        // Bold phrases to check - FIXED: Added companyname to the array
+        const boldPhrases = [employeeName, companyname, designation, formattedperiodstartDate, formattedperiodendDate, period, formattedworkstartDate, formattedworkendDate, "Full-time Employee"];
+
+        splitParagraph1.forEach(line => {
+            let currentX = 18;
+            let remainingLine = line;
+
+            while (remainingLine.length > 0) {
+                // Find which bold phrase comes first in the line
+                let firstBoldIndex = -1;
+                let foundBold = '';
+
+                boldPhrases.forEach(phrase => {
+                    const index = remainingLine.indexOf(phrase);
+                    if (index !== -1 && (firstBoldIndex === -1 || index < firstBoldIndex)) {
+                        firstBoldIndex = index;
+                        foundBold = phrase;
+                    }
+                });
+
+                if (firstBoldIndex === -1) {
+                    // No bold phrase found, print remaining normal text
+                    doc.setFont("MyriadPro", "normal");
+                    doc.text(remainingLine, currentX, y);
+                    currentX += doc.getTextWidth(remainingLine);
+                    remainingLine = '';
+                } else {
+                    // Print normal text before bold phrase
+                    const normalText = remainingLine.substring(0, firstBoldIndex);
+                    if (normalText) {
+                        doc.setFont("MyriadPro", "normal");
+                        doc.text(normalText, currentX, y);
+                        currentX += doc.getTextWidth(normalText);
+                    }
+
+                    // Print bold phrase
+                    doc.setFont("MyriadPro", "bold");
+                    doc.text(foundBold, currentX, y);
+                    currentX += doc.getTextWidth(foundBold);
+
+                    // Update remaining line
+                    remainingLine = remainingLine.substring(firstBoldIndex + foundBold.length);
+                }
+            }
+
+            y += 7; // Next line
         });
 
-        try {
-            // Add Myriad Pro font
-            const fontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-REGULAR.ttf`);
-            doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
-            doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
+        y += 5; // Space after paragraph
 
-            const boldFontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-BOLD.ttf`);
-            doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
-            doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
+        // ----- Paragraph 2 -----
+        doc.setFont("MyriadPro", "normal");
+        const para2 = `During his employment, we found ${employeeName} to be a professional, knowledgeable and result-oriented with theoretical and practical understanding of work requirements.`;
 
-            // Set default font
-            doc.setFont("MyriadPro");
+        const splitPara2 = doc.splitTextToSize(para2, 170);
+        let para2Y = y;
+        splitPara2.forEach(line => {
+            const nameIndex = line.indexOf(employeeName);
+            if (nameIndex !== -1) {
+                const beforeName = line.substring(0, nameIndex);
+                const afterName = line.substring(nameIndex + employeeName.length);
+                let xLine = 18;
 
-            const bgBase64 = await getBase64FromUrl(`http://localhost:3000/experienceletter.png`);
-            doc.addImage(bgBase64, 'PNG', 0, 0, 210, 297);
+                doc.setFont("MyriadPro", "normal");
+                doc.text(beforeName, xLine, para2Y);
+                xLine += doc.getTextWidth(beforeName);
 
-            doc.setFontSize(14);
-            doc.setFont("MyriadPro", "normal");
-            doc.text(`${formatDate(new Date())}`, 189, 36.5, { align: "center" });
+                doc.setFont("MyriadPro", "bold");
+                doc.text(employeeName, xLine, para2Y);
+                xLine += doc.getTextWidth(employeeName);
 
-            doc.setFontSize(12);
-            let y = 80;
+                doc.setFont("MyriadPro", "normal");
+                doc.text(afterName, xLine, para2Y);
+            } else {
+                doc.setFont("MyriadPro", "normal");
+                doc.text(line, 18, para2Y);
+            }
+            para2Y += 7;
+        });
+        y = para2Y + 5;
 
-            // Subject - Bold
-            doc.setFontSize(15);
-            doc.setFont("MyriadPro", "bold");
-            doc.text(`Subject: `, 18, y);
-            doc.setFont("MyriadPro", "normal");
-            doc.text(`Experience Of ${designation} at Plexus Technology.`, 38, y);
-            y += 15;
+        // ----- Paragraph 3 -----
+        doc.setFont("MyriadPro", "normal");
+        const para3 = `He has a friendly, outgoing personality, very good sense of humour and works well as an individual or member of a team as required by the management.`;
+        const splitPara3 = doc.splitTextToSize(para3, 170);
+        splitPara3.forEach(line => {
+            doc.text(line, 18, y);
+            y += 7;
+        });
 
-            doc.setFontSize(14);
-            doc.setFont("MyriadPro", "bold");
-            doc.text(`Dear ${employeeName},`, 18, y);
-            y += 15;
+        y += 10;
 
-            // ----- Paragraph 1 with automatic line breaks -----
-            doc.setFont("MyriadPro", "normal");
+        // Signature
+        doc.setFontSize(11);
+        doc.setFont("MyriadPro", "bold");
+        const textWidth = doc.getTextWidth(employeeName);
+        const underlineWidth = textWidth + 10; 
+        const xCenter = 153;
+        const underlineX = xCenter - (underlineWidth / 2);
+        const underlineY = y + 48; // 2 units niche underline
+        doc.text(employeeName, xCenter, y += 54, { align: "center" });
+        doc.setDrawColor(0); // black color
+        doc.setLineWidth(0.3);
+        doc.line(underlineX, underlineY, underlineX + underlineWidth, underlineY);
 
-            // Create the complete paragraph text
-            const paragraph1 = `This is to Certify that ${employeeName} was working with ${companyname} India as ${designation} from ${formattedperiodstartDate} to ${formattedperiodendDate} as a ${period} and ${formattedworkstartDate} to ${formattedworkendDate} as a Full-time Employee per the personnel roles and company's employment record.`;
-
-            // Split text for width
-            const splitParagraph1 = doc.splitTextToSize(paragraph1, 170);
-
-            // Bold phrases to check
-            const boldPhrases = [employeeName, companyname, designation, formattedperiodstartDate, formattedperiodendDate, period, formattedworkstartDate, formattedworkendDate, "Full-time Employee"];
-
-            splitParagraph1.forEach(line => {
-                let currentX = 18;
-                let remainingLine = line;
-
-                while (remainingLine.length > 0) {
-                    // Find which bold phrase comes first in the line
-                    let firstBoldIndex = -1;
-                    let foundBold = '';
-
-                    boldPhrases.forEach(phrase => {
-                        const index = remainingLine.indexOf(phrase);
-                        if (index !== -1 && (firstBoldIndex === -1 || index < firstBoldIndex)) {
-                            firstBoldIndex = index;
-                            foundBold = phrase;
-                        }
-                    });
-
-                    if (firstBoldIndex === -1) {
-                        // No bold phrase found, print remaining normal text
-                        doc.setFont("MyriadPro", "normal");
-                        doc.text(remainingLine, currentX, y);
-                        currentX += doc.getTextWidth(remainingLine);
-                        remainingLine = '';
-                    } else {
-                        // Print normal text before bold phrase
-                        const normalText = remainingLine.substring(0, firstBoldIndex);
-                        if (normalText) {
-                            doc.setFont("MyriadPro", "normal");
-                            doc.text(normalText, currentX, y);
-                            currentX += doc.getTextWidth(normalText);
-                        }
-
-                        // Print bold phrase
-                        doc.setFont("MyriadPro", "bold");
-                        doc.text(foundBold, currentX, y);
-                        currentX += doc.getTextWidth(foundBold);
-
-                        // Update remaining line
-                        remainingLine = remainingLine.substring(firstBoldIndex + foundBold.length);
-                    }
-                }
-
-                y += 7; // Next line
-            });
-
-            y += 5; // Space after paragraph
-
-
-            // ----- Paragraph 2 -----
-            doc.setFont("MyriadPro", "normal");
-            const para2 = `During his employment, we found ${employeeName} to be a professional, knowledgeable and result-oriented with theoretical and practical understanding of work requirements.`;
-
-            const splitPara2 = doc.splitTextToSize(para2, 170);
-            let para2Y = y;
-            splitPara2.forEach(line => {
-                const nameIndex = line.indexOf(employeeName);
-                if (nameIndex !== -1) {
-                    const beforeName = line.substring(0, nameIndex);
-                    const afterName = line.substring(nameIndex + employeeName.length);
-                    let xLine = 18;
-
-                    doc.setFont("MyriadPro", "normal");
-                    doc.text(beforeName, xLine, para2Y);
-                    xLine += doc.getTextWidth(beforeName);
-
-                    doc.setFont("MyriadPro", "bold");
-                    doc.text(employeeName, xLine, para2Y);
-                    xLine += doc.getTextWidth(employeeName);
-
-                    doc.setFont("MyriadPro", "normal");
-                    doc.text(afterName, xLine, para2Y);
-                } else {
-                    doc.setFont("MyriadPro", "normal");
-                    doc.text(line, 18, para2Y);
-                }
-                para2Y += 7;
-            });
-            y = para2Y + 5;
-
-            // ----- Paragraph 3 -----
-            doc.setFont("MyriadPro", "normal");
-            const para3 = `He has a friendly, outgoing personality, very good sense of humour and works well as an individual or member of a team as required by the management.`;
-            const splitPara3 = doc.splitTextToSize(para3, 170);
-            splitPara3.forEach(line => {
-                doc.text(line, 18, y);
-                y += 7;
-            });
-
-            y += 10;
-
-            // Signature
-            doc.setFontSize(11);
-            doc.setFont("MyriadPro", "bold");
-            const textWidth = doc.getTextWidth(employeeName);
-            const underlineWidth = textWidth + 10; 
-            const xCenter = 153;
-            const underlineX = xCenter - (underlineWidth / 2);
-            const underlineY = y + 48; // 2 units niche underline
-            doc.text(employeeName, xCenter, y += 54, { align: "center" });
-            doc.setDrawColor(0); // black color
-            doc.setLineWidth(0.3);
-            doc.line(underlineX, underlineY, underlineX + underlineWidth, underlineY);
-
-
-            doc.save("Experience-Letter.pdf");
-        } catch (error) {
-            console.error("Error loading background image or font:", error);
-        }
-    };
+        doc.save("Experience-Letter.pdf");
+    } catch (error) {
+        console.error("Error loading background image or font:", error);
+    }
+};
 
     const generatePDFInternship = async () => {
         const {
@@ -333,20 +331,31 @@ const Letters = () => {
         });
 
         const formattedstartdate = formatDate(startdate);
+        
         try {
             // Add Myriad Pro font
-            const fontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-REGULAR.ttf`);
+            const fontBase64 = await getBase64FromUrl2(`https://admin.plexus-technology.in/MYRIADPRO-REGULAR.ttf`);
             doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
             doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
 
-            const boldFontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-BOLD.ttf`);
+            const boldFontBase64 = await getBase64FromUrl2(`https://admin.plexus-technology.in/MYRIADPRO-BOLD.ttf`);
             doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
             doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
+
+            // Function to add text with letter spacing
+            const addTextWithLetterSpacing = (text, x, y, spacing = 0.5) => {
+                let currentX = x;
+                for (let i = 0; i < text.length; i++) {
+                    doc.text(text[i], currentX, y);
+                    currentX += doc.getTextWidth(text[i]) + spacing;
+                }
+                return currentX;
+            };
 
             // Set default font
             doc.setFont("MyriadPro");
 
-            const bgBase64 = await getBase64FromUrl(`http://localhost:3000/internshipoffer.png`);
+            const bgBase64 = await getBase64FromUrl(`https://admin.plexus-technology.in/internshipoffer.png`);
             doc.addImage(bgBase64, 'PNG', 0, 0, 210, 297);
 
             doc.setFontSize(14);
@@ -354,7 +363,7 @@ const Letters = () => {
             doc.text(`${formatDate(new Date())}`, 188, 36.5, { align: "center" });
 
             doc.setFontSize(12);
-            let y = 100;
+            let y = 85;
 
             // Subject - Bold (Modified for Internship)
             doc.setFontSize(14);
@@ -374,23 +383,26 @@ const Letters = () => {
             const paragraph1 = `In Reference to your application,we would like congratulate you on being selected for an internship with ${companyname} from ${city} . Your training is scheduled to start on ${formattedstartdate}. All of us at ${companyname} are excited that you will be joining our team.`;
 
             // Split text to fit within page width (170mm width to leave margins)
-            const splitParagraph1 = doc.splitTextToSize(paragraph1, 170);
+            const splitParagraph1 = doc.splitTextToSize(paragraph1, 150);
 
-            // Process each line to apply bold formatting to specific words
+            // Process each line to apply bold formatting and letter spacing
             splitParagraph1.forEach(line => {
                 let currentX = 18;
-
-                // Split the line into words to check for bold formatting
                 const words = line.split(' ');
                 const boldWords = [employeeName, companyname, city, formattedstartdate, collegename];
+
+                // Check if this is part of "In Reference" paragraph (apply letter spacing to entire paragraph)
+                const isInReferenceParagraph = paragraph1.startsWith('In Reference');
 
                 for (let i = 0; i < words.length; i++) {
                     const word = words[i];
                     const isLastWord = i === words.length - 1;
                     const wordWithSpace = isLastWord ? word : word + ' ';
 
-                    // Check if this word should be bold
-                    const shouldBeBold = boldWords.some(boldWord => word.includes(boldWord.replace(/,/g, '')));
+                    // Check if this word should be bold (including Plexus Technology)
+                    const shouldBeBold = boldWords.some(boldWord => word.includes(boldWord.replace(/,/g, ''))) ||
+                                       word.toLowerCase().includes('plexus') || 
+                                       word.toLowerCase().includes('technology');
 
                     if (shouldBeBold) {
                         doc.setFont("MyriadPro", "bold");
@@ -398,8 +410,13 @@ const Letters = () => {
                         doc.setFont("MyriadPro", "normal");
                     }
 
-                    doc.text(wordWithSpace, currentX, y);
-                    currentX += doc.getTextWidth(wordWithSpace);
+                    // Apply letter spacing to entire "In Reference" paragraph
+                    if (isInReferenceParagraph) {
+                        currentX = addTextWithLetterSpacing(wordWithSpace, currentX, y, 0.3);
+                    } else {
+                        doc.text(wordWithSpace, currentX, y);
+                        currentX += doc.getTextWidth(wordWithSpace);
+                    }
                 }
 
                 y += 8; // Move to next line
@@ -411,29 +428,52 @@ const Letters = () => {
             doc.setFont("MyriadPro", "normal");
             const para2 = `In your internship, we will include training and focus on learning ${designation} and new skills and gaining a deeper understanding of concepts through hands-on ${designation} of the knowledge you learned Information about the project and technical platform will be shared with you before the commencement of your training Congratulations to you and we are excited to work with you.`;
 
-            const splitPara2 = doc.splitTextToSize(para2, 170);
+            const splitPara2 = doc.splitTextToSize(para2, 150);
             let para2Y = y;
+            
             splitPara2.forEach(line => {
-                const nameIndex = line.indexOf(designation);
-                if (nameIndex !== -1) {
-                    const beforeName = line.substring(0, nameIndex);
-                    const afterName = line.substring(nameIndex + designation.length);
-                    let xLine = 18;
+                let currentX = 18;
+                
+                // Check if this is part of "In your internship" paragraph (apply letter spacing to entire paragraph)
+                const isInYourInternshipParagraph = para2.startsWith('In your internship');
+                
+                // Regular processing for lines with designation
+                const designationIndex = line.indexOf(designation);
+                if (designationIndex !== -1) {
+                    const beforeDesignation = line.substring(0, designationIndex);
+                    const afterDesignation = line.substring(designationIndex + designation.length);
 
                     doc.setFont("MyriadPro", "normal");
-                    doc.text(beforeName, xLine, para2Y);
-                    xLine += doc.getTextWidth(beforeName);
+                    if (isInYourInternshipParagraph) {
+                        currentX = addTextWithLetterSpacing(beforeDesignation, currentX, para2Y, 0.3);
+                    } else {
+                        doc.text(beforeDesignation, currentX, para2Y);
+                        currentX += doc.getTextWidth(beforeDesignation);
+                    }
 
                     doc.setFont("MyriadPro", "bold");
-                    doc.text(designation, xLine, para2Y);
-                    xLine += doc.getTextWidth(designation);
+                    if (isInYourInternshipParagraph) {
+                        currentX = addTextWithLetterSpacing(designation, currentX, para2Y, 0.3);
+                    } else {
+                        doc.text(designation, currentX, para2Y);
+                        currentX += doc.getTextWidth(designation);
+                    }
 
                     doc.setFont("MyriadPro", "normal");
-                    doc.text(afterName, xLine, para2Y);
+                    if (isInYourInternshipParagraph) {
+                        addTextWithLetterSpacing(afterDesignation, currentX, para2Y, 0.3);
+                    } else {
+                        doc.text(afterDesignation, currentX, para2Y);
+                    }
                 } else {
                     doc.setFont("MyriadPro", "normal");
-                    doc.text(line, 18, para2Y);
+                    if (isInYourInternshipParagraph) {
+                        addTextWithLetterSpacing(line, 18, para2Y, 0.3);
+                    } else {
+                        doc.text(line, 18, para2Y);
+                    }
                 }
+                
                 para2Y += 8;
             });
             y = para2Y + 5;
@@ -445,134 +485,175 @@ const Letters = () => {
     };
 
     const generatePDFInternship2 = async () => {
-        const {
-            employeeName,
-            designation,
-            collegename,
-            companyname = "Plexus Technology",
-            startdate,
-            enddate,
-        } = formData;
+    const {
+        employeeName,
+        designation,
+        collegename,
+        companyname = "Plexus Technology",
+        startdate,
+        enddate,
+    } = formData;
 
-        const doc = new jsPDF({
-            orientation: "portrait",
-            unit: "mm",
-            format: "a4"
-        });
+    const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+    });
 
-        const formattedstartdate = formatDate(startdate);
-        const formattedenddate = formatDate(enddate);
+    const formattedstartdate = formatDate(startdate);
+    const formattedenddate = formatDate(enddate);
 
-        try {
-            // Add Myriad Pro font
-            const fontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-REGULAR.ttf`);
-            doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
-            doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
+    try {
+        // Add Myriad Pro font
+        const fontBase64 = await getBase64FromUrl2(`https://admin.plexus-technology.in/MYRIADPRO-REGULAR.ttf`);
+        doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
+        doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
 
-            const boldFontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-BOLD.ttf`);
-            doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
-            doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
+        const boldFontBase64 = await getBase64FromUrl2(`https://admin.plexus-technology.in/MYRIADPRO-BOLD.ttf`);
+        doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
+        doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
 
-            // Set default font
-            doc.setFont("MyriadPro");
+        // Function to add text with letter spacing
+        const addTextWithLetterSpacing = (text, x, y, spacing = 0.5) => {
+            let currentX = x;
+            for (let i = 0; i < text.length; i++) {
+                doc.text(text[i], currentX, y);
+                currentX += doc.getTextWidth(text[i]) + spacing;
+            }
+            return currentX;
+        };
 
-            const bgBase64 = await getBase64FromUrl(`http://localhost:3000/internshipcertificate.png`);
-            doc.addImage(bgBase64, 'PNG', 0, 0, 210, 297);
+        // Set default font
+        doc.setFont("MyriadPro");
 
-            doc.setFontSize(14);
-            doc.setFont("MyriadPro", "normal");
-            doc.text(`${formatDate(new Date())}`, 188, 36.5, { align: "center" });
+        const bgBase64 = await getBase64FromUrl(`https://admin.plexus-technology.in/internshipcertificate.png`);
+        doc.addImage(bgBase64, 'PNG', 0, 0, 210, 297);
 
-            doc.setFontSize(12);
-            let y = 100;
+        doc.setFontSize(14);
+        doc.setFont("MyriadPro", "normal");
+        doc.text(`${formatDate(new Date())}`, 188, 36.5, { align: "center" });
 
-            // Subject - Bold (Modified for Internship)
-            doc.setFontSize(14);
-            doc.setFont("MyriadPro", "bold");
-            doc.text(`Dear , ${employeeName}`, 18, y);
-            y += 10;
+        doc.setFontSize(12);
+        let y = 90;
 
-            doc.setFontSize(13);
-            doc.setFont("MyriadPro", "normal");
-            doc.text(`${collegename},`, 18, y);
-            y += 10;
+        // Subject - Bold (Modified for Internship)
+        doc.setFontSize(14);
+        doc.setFont("MyriadPro", "bold");
+        doc.text(`Dear , ${employeeName}`, 18, y);
+        y += 10;
 
-            // ----- Paragraph 1 with automatic line breaks (Modified for Internship) -----
-            doc.setFont("MyriadPro", "normal");
+        doc.setFontSize(13);
+        doc.setFont("MyriadPro", "normal");
+        doc.text(`${collegename},`, 18, y);
+        y += 10;
 
-            // Create the complete paragraph text for internship
-            const paragraph1 = `This is to Certify that ${employeeName} has done Internship as a ${designation} we would like to Congratulate you on being Completed for an Internship with ${companyname} from Surat . Her training is scheduled on ${formattedstartdate} to ${formattedenddate}.`;
+        // ----- Paragraph 1 with automatic line breaks (Modified for Internship) -----
+        doc.setFont("MyriadPro", "normal");
 
-            // Split text to fit within page width (170mm width to leave margins)
-            const splitParagraph1 = doc.splitTextToSize(paragraph1, 170);
+        // Create the complete paragraph text for internship
+        const paragraph1 = `This is to Certify that ${employeeName} has done Internship as a ${designation} we would like to Congratulate you on being Completed for an Internship with ${companyname} from Surat . Her training is scheduled on ${formattedstartdate} to ${formattedenddate}.`;
 
-            // Process each line to apply bold formatting to specific words
-            splitParagraph1.forEach(line => {
-                let currentX = 18;
+        // Split text to fit within page width (150mm width to leave margins - matching generatePDFInternship)
+        const splitParagraph1 = doc.splitTextToSize(paragraph1, 150);
 
-                // Split the line into words to check for bold formatting
-                const words = line.split(' ');
-                const boldWords = [employeeName, designation, companyname, formattedstartdate, collegename, formattedenddate];
+        // Process each line to apply bold formatting and letter spacing
+        splitParagraph1.forEach(line => {
+            let currentX = 18;
+            const words = line.split(' ');
+            const boldWords = [employeeName, designation, companyname, formattedstartdate, collegename, formattedenddate];
 
-                for (let i = 0; i < words.length; i++) {
-                    const word = words[i];
-                    const isLastWord = i === words.length - 1;
-                    const wordWithSpace = isLastWord ? word : word + ' ';
+            // Check if this is part of "This is to Certify" paragraph (apply letter spacing to entire paragraph)
+            const isCertifyParagraph = paragraph1.startsWith('This is to Certify');
 
-                    // Check if this word should be bold
-                    const shouldBeBold = boldWords.some(boldWord => word.includes(boldWord.replace(/,/g, '')));
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                const isLastWord = i === words.length - 1;
+                const wordWithSpace = isLastWord ? word : word + ' ';
 
-                    if (shouldBeBold) {
-                        doc.setFont("MyriadPro", "bold");
-                    } else {
-                        doc.setFont("MyriadPro", "normal");
-                    }
+                // Check if this word should be bold (including Plexus Technology)
+                const shouldBeBold = boldWords.some(boldWord => word.includes(boldWord.replace(/,/g, ''))) ||
+                                   word.toLowerCase().includes('plexus') || 
+                                   word.toLowerCase().includes('technology');
 
+                if (shouldBeBold) {
+                    doc.setFont("MyriadPro", "bold");
+                } else {
+                    doc.setFont("MyriadPro", "normal");
+                }
+
+                // Apply letter spacing to entire "This is to Certify" paragraph
+                if (isCertifyParagraph) {
+                    currentX = addTextWithLetterSpacing(wordWithSpace, currentX, y, 0.3);
+                } else {
                     doc.text(wordWithSpace, currentX, y);
                     currentX += doc.getTextWidth(wordWithSpace);
                 }
+            }
 
-                y += 8; // Move to next line
-            });
+            y += 8; // Move to next line
+        });
 
-            y += 5; // Add some space after paragraph 1
+        y += 5; // Add some space after paragraph 1
 
-            // ----- Paragraph 2 (Modified for Internship) -----
-            doc.setFont("MyriadPro", "normal");
-            const para2 = `During Internship she has shown exemplary Hard work and also been instrmental in getting the initial client traction and activity and has completed all the task a entrusted to him in the time and in a good manner. we wish all the best all her for future goals and wishes.`;
+        // ----- Paragraph 2 (Modified for Internship) -----
+        doc.setFont("MyriadPro", "normal");
+        const para2 = `During Internship she has shown exemplary Hard work and also been instrmental in getting the initial client traction and activity and has completed all the task a entrusted to him in the time and in a good manner. we wish all the best all her for future goals and wishes.`;
 
-            const splitPara2 = doc.splitTextToSize(para2, 170);
-            let para2Y = y;
-            splitPara2.forEach(line => {
-                const nameIndex = line.indexOf(designation);
-                if (nameIndex !== -1) {
-                    const beforeName = line.substring(0, nameIndex);
-                    const afterName = line.substring(nameIndex + designation.length);
-                    let xLine = 18;
+        const splitPara2 = doc.splitTextToSize(para2, 150);
+        let para2Y = y;
+        
+        splitPara2.forEach(line => {
+            let currentX = 18;
+            
+            // Check if this is part of "During Internship" paragraph (apply letter spacing to entire paragraph)
+            const isDuringInternshipParagraph = para2.startsWith('During Internship');
+            
+            // Regular processing for lines with designation
+            const designationIndex = line.indexOf(designation);
+            if (designationIndex !== -1) {
+                const beforeDesignation = line.substring(0, designationIndex);
+                const afterDesignation = line.substring(designationIndex + designation.length);
 
-                    doc.setFont("MyriadPro", "normal");
-                    doc.text(beforeName, xLine, para2Y);
-                    xLine += doc.getTextWidth(beforeName);
-
-                    doc.setFont("MyriadPro", "bold");
-                    doc.text(designation, xLine, para2Y);
-                    xLine += doc.getTextWidth(designation);
-
-                    doc.setFont("MyriadPro", "normal");
-                    doc.text(afterName, xLine, para2Y);
+                doc.setFont("MyriadPro", "normal");
+                if (isDuringInternshipParagraph) {
+                    currentX = addTextWithLetterSpacing(beforeDesignation, currentX, para2Y, 0.3);
                 } else {
-                    doc.setFont("MyriadPro", "normal");
+                    doc.text(beforeDesignation, currentX, para2Y);
+                    currentX += doc.getTextWidth(beforeDesignation);
+                }
+
+                doc.setFont("MyriadPro", "bold");
+                if (isDuringInternshipParagraph) {
+                    currentX = addTextWithLetterSpacing(designation, currentX, para2Y, 0.3);
+                } else {
+                    doc.text(designation, currentX, para2Y);
+                    currentX += doc.getTextWidth(designation);
+                }
+
+                doc.setFont("MyriadPro", "normal");
+                if (isDuringInternshipParagraph) {
+                    addTextWithLetterSpacing(afterDesignation, currentX, para2Y, 0.3);
+                } else {
+                    doc.text(afterDesignation, currentX, para2Y);
+                }
+            } else {
+                doc.setFont("MyriadPro", "normal");
+                if (isDuringInternshipParagraph) {
+                    addTextWithLetterSpacing(line, 18, para2Y, 0.3);
+                } else {
                     doc.text(line, 18, para2Y);
                 }
-                para2Y += 8;
-            });
-            y = para2Y + 5;
+            }
+            
+            para2Y += 8;
+        });
+        y = para2Y + 5;
 
-            doc.save("Internship-certificate-Letter.pdf");
-        } catch (error) {
-            console.error("Error loading background image or font:", error);
-        }
-    };
+        doc.save("Internship-certificate-Letter.pdf");
+    } catch (error) {
+        console.error("Error loading background image or font:", error);
+    }
+};
 
     const generatePDFInternship3 = async () => {
         const {
@@ -594,11 +675,11 @@ const Letters = () => {
 
         try {
             // Add Myriad Pro font
-            const fontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-REGULAR.ttf`);
+            const fontBase64 = await getBase64FromUrl2(`https://admin.plexus-technology.in/MYRIADPRO-REGULAR.ttf`);
             doc.addFileToVFS('MYRIADPRO-REGULAR.ttf', fontBase64);
             doc.addFont('MYRIADPRO-REGULAR.ttf', 'MyriadPro', 'normal');
 
-            const boldFontBase64 = await getBase64FromUrl2(`http://localhost:3000/MYRIADPRO-BOLD.ttf`);
+            const boldFontBase64 = await getBase64FromUrl2(`https://admin.plexus-technology.in/MYRIADPRO-BOLD.ttf`);
             doc.addFileToVFS('MYRIADPRO-BOLD.ttf', boldFontBase64);
             doc.addFont('MYRIADPRO-BOLD.ttf', 'MyriadPro', 'bold');
 
@@ -747,39 +828,39 @@ const Letters = () => {
 
 
             // PAGE 1 - Add background and internship content
-            const bg1Base64 = await getBase64FromUrl(`http://localhost:3000/1.png`);
+            const bg1Base64 = await getBase64FromUrl(`https://admin.plexus-technology.in/1.png`);
             doc.addImage(bg1Base64, 'PNG', 0, 0, 210, 297);
             doc.setFont("MyriadPro");
             addInternshipContent();
 
             // PAGE 2 - Add background image only
             doc.addPage();
-            const bg2Base64 = await getBase64FromUrl(`http://localhost:3000/2.png`);
+            const bg2Base64 = await getBase64FromUrl(`https://admin.plexus-technology.in/2.png`);
             doc.addImage(bg2Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 3 - Add background image only
             doc.addPage();
-            const bg3Base64 = await getBase64FromUrl(`http://localhost:3000/3.png`);
+            const bg3Base64 = await getBase64FromUrl(`https://admin.plexus-technology.in/3.png`);
             doc.addImage(bg3Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 4 - Add background image only
             doc.addPage();
-            const bg4Base64 = await getBase64FromUrl(`http://localhost:3000/4.png`);
+            const bg4Base64 = await getBase64FromUrl(`https://admin.plexus-technology.in/4.png`);
             doc.addImage(bg4Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 5 - Add background image only
             doc.addPage();
-            const bg5Base64 = await getBase64FromUrl(`http://localhost:3000/5.png`);
+            const bg5Base64 = await getBase64FromUrl(`https://admin.plexus-technology.in/5.png`);
             doc.addImage(bg5Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 6 - Add background image only
             doc.addPage();
-            const bg6Base64 = await getBase64FromUrl(`http://localhost:3000/6.png`);
+            const bg6Base64 = await getBase64FromUrl(`https://admin.plexus-technology.in/6.png`);
             doc.addImage(bg6Base64, 'PNG', 0, 0, 210, 297);
 
             // PAGE 7 - Add background and internship content
             doc.addPage();
-            const bg7Base64 = await getBase64FromUrl(`http://localhost:3000/7.png`);
+            const bg7Base64 = await getBase64FromUrl(`https://admin.plexus-technology.in/7.png`);
             doc.addImage(bg7Base64, 'PNG', 0, 0, 210, 297);
             doc.setFont("MyriadPro");
             addInternshipContent2();

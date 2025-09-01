@@ -87,7 +87,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('https://api.pslink.world/api/plexus/hiringresume/read');
+      const response = await fetch('http://localhost:5005/api/plexus/hiringresume/read');
       const data = await response.json();
 
       const tomorrow = new Date();
@@ -143,7 +143,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('https://api.pslink.world/api/plexus/leave/read');
+      const response = await fetch('http://localhost:5005/api/plexus/leave/read');
       const data = await response.json();
 
       const tomorrow = new Date();
@@ -187,7 +187,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('https://api.pslink.world/api/plexus/evaluations/read');
+      const response = await fetch('http://localhost:5005/api/plexus/evaluations/read');
       const data = await response.json();
 
       const currentDate = new Date();
@@ -267,29 +267,31 @@ export default function Ecommerce() {
   };
 
   const handleCloseLeavePopup = async () => {
-    try {
-      // Extract all leave IDs
-      const leaveIds = leaveData.map(leave => leave._id);
+    // try {
+    //   // Extract all leave IDs
+    //   const leaveIds = leaveData.map(leave => leave._id);
 
 
-      // Call delete API with array of IDs
-      const response = await axios.delete(`https://api.pslink.world/api/plexus/leave/multy`, {
-        data: { ids: leaveIds }
-      });
+    //   // Call delete API with array of IDs
+    //   const response = await axios.delete(`http://localhost:5005/api/plexus/leave/multy`, {
+    //     data: { ids: leaveIds }
+    //   });
 
-      if (response.status === 200) {
-        console.log('Leaves acknowledged and deleted successfully');
-        setShowLeavePopup(false);
-        setLeaveData([]);
-      } else {
-        console.error('Failed to delete leaves');
-        setShowLeavePopup(false);
-      }
-    } catch (error) {
-      console.error('Error deleting leaves:', error);
-      // Still close the popup even if delete fails
-      setShowLeavePopup(false);
-    }
+    //   if (response.status === 200) {
+    //     console.log('Leaves acknowledged and deleted successfully');
+    //     setShowLeavePopup(false);
+    //     setLeaveData([]);
+    //   } else {
+    //     console.error('Failed to delete leaves');
+    //     setShowLeavePopup(false);
+    //   }
+    // } catch (error) {
+    //   console.error('Error deleting leaves:', error);
+    //   // Still close the popup even if delete fails
+    //   setShowLeavePopup(false);
+    // }
+
+    setShowLeavePopup(false);
   };
 
   const handleLeaveRemindLater = () => {

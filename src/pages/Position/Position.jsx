@@ -38,7 +38,7 @@ const OpenPosition = () => {
 
     const getData = (page) => {
         setLoading(true);
-        axios.post('https://api.pslink.world/api/plexus/position/read/admin', { page })
+        axios.post('http://localhost:5005/api/plexus/position/read/admin', { page })
             .then((res) => {
                 setData(res.data.data);
                 setTotalItems(res.data.totalItems);
@@ -165,10 +165,10 @@ const OpenPosition = () => {
         try {
             setIsSubmitting(true);
             if (isEditing) {
-                await axios.patch(`https://api.pslink.world/api/plexus/position/update/${formData._id}`, formData);
+                await axios.patch(`http://localhost:5005/api/plexus/position/update/${formData._id}`, formData);
                 toast.success("Position updated successfully");
             } else {
-                await axios.post('https://api.pslink.world/api/plexus/position/create', formData);
+                await axios.post('http://localhost:5005/api/plexus/position/create', formData);
                 toast.success("Position created successfully");
             }
             getData(currentPage);
@@ -185,7 +185,7 @@ const OpenPosition = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this position?")) {
             try {
                 setIsSubmitting(true);
-                const res = await axios.delete(`https://api.pslink.world/api/plexus/position/delete/${id}`);
+                const res = await axios.delete(`http://localhost:5005/api/plexus/position/delete/${id}`);
                 toast.success(res.data.message);
                 getData(currentPage);
             } catch (err) {
@@ -200,7 +200,7 @@ const OpenPosition = () => {
     const handleStatusToggle = async (id, currentStatus) => {
         try {
             setIsSubmitting(true);
-            await axios.patch(`https://api.pslink.world/api/plexus/position/update/${id}`, { status: !currentStatus });
+            await axios.patch(`http://localhost:5005/api/plexus/position/update/${id}`, { status: !currentStatus });
             toast.success("Status updated successfully");
             getData(currentPage);
         } catch (err) {

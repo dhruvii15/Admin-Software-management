@@ -103,7 +103,7 @@ const Salary = () => {
         try {
             setLoading(true);
             // Replace with your salary API endpoint
-            const response = await axios.get('https://api.pslink.world/api/plexus/employee/salary/read');
+            const response = await axios.get('http://localhost:5005/api/plexus/employee/salary/read');
             const data = response.data.data;
             setOriginalData(data);
             setFilteredData(data);
@@ -237,8 +237,8 @@ const Salary = () => {
 
             // Replace with your salary API endpoints
             const endpoint = id
-                ? `https://api.pslink.world/api/plexus/employee/salary/update/${id}`
-                : 'https://api.pslink.world/api/plexus/employee/salary/create';
+                ? `http://localhost:5005/api/plexus/employee/salary/update/${id}`
+                : 'http://localhost:5005/api/plexus/employee/salary/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formDataToSend, {
@@ -293,7 +293,7 @@ const Salary = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this salary record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`https://api.pslink.world/api/plexus/employee/salary/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5005/api/plexus/employee/salary/delete/${id}`);
                 toast.success(response.data.message || 'Salary deleted successfully!');
                 getData();
             } catch (err) {
@@ -336,7 +336,7 @@ const Salary = () => {
             setIsUpdatingEmployee(true);
 
             // Call update API
-            const response = await axios.patch(`https://api.pslink.world/api/plexus/employee/salary/update/${id}`, {
+            const response = await axios.patch(`http://localhost:5005/api/plexus/employee/salary/update/${id}`, {
                 remark: employeeRemark,
                 name: employeename
             });

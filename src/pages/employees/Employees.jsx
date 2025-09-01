@@ -95,7 +95,7 @@ const Employees = () => {
         try {
             setLoading(true);
             // Replace with your employee API endpoint
-            const response = await axios.get('https://api.pslink.world/api/plexus/employee/read');
+            const response = await axios.get('http://localhost:5005/api/plexus/employee/read');
             setFilteredData(response.data.data);
             const data = response.data.data
             const uniquePositions = [...new Set(data.map(item => item.position).filter(Boolean))];
@@ -235,8 +235,8 @@ const Employees = () => {
             });
 
             const endpoint = id
-                ? `https://api.pslink.world/api/plexus/employee/update/${id}`
-                : 'https://api.pslink.world/api/plexus/employee/create';
+                ? `http://localhost:5005/api/plexus/employee/update/${id}`
+                : 'http://localhost:5005/api/plexus/employee/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formDataToSend, {
@@ -299,7 +299,7 @@ const Employees = () => {
             try {
                 setIsSubmitting(true);
                 // Replace with your employee API endpoint
-                const response = await axios.delete(`https://api.pslink.world/api/plexus/employee/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5005/api/plexus/employee/delete/${id}`);
                 toast.success(response.data.message);
                 getData();
             } catch (err) {

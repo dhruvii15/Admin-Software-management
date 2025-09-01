@@ -44,17 +44,14 @@ const All = () => {
     const navigate = useNavigate();
 
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(10); // You can make this configurable if needed
+    const [itemsPerPage] = useState(10);
 
-    // Add these computed values after your state declarations
     const totalItems = filteredData.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentPageData = filteredData.slice(startIndex, endIndex);
 
-
-    // Add this function to handle page changes
     const handlePageChange = (page) => {
         setCurrentPage(page);
     };
@@ -179,6 +176,46 @@ const All = () => {
         return { date, time };
     };
 
+    // Helper function to parse experience value to numeric year
+    const parseExperienceToYear = (experienceStr) => {
+        if (!experienceStr) return 0;
+
+        const str = experienceStr.toLowerCase().trim();
+
+        // Handle "Fresher" case
+        if (str === 'fresher') return 0;
+
+        // Extract numeric value from strings like "1.5 year", "2 year", "0.5"
+        const match = str.match(/(\d+(?:\.\d+)?)/);
+        if (match) {
+            return parseFloat(match[1]);
+        }
+
+        return 0;
+    };
+
+    // Helper function to check if experience falls within a range
+    const isExperienceInRange = (experienceStr, filterRange) => {
+        const year = parseExperienceToYear(experienceStr);
+
+        switch (filterRange) {
+            case 'fresher':
+                return year === 0 || experienceStr.toLowerCase() === 'fresher';
+            case '0-1':
+                return year >= 0 && year <= 1;
+            case '1-2':
+                return year > 1 && year <= 2;
+            case '2-3':
+                return year > 2 && year <= 3;
+            case '3-4':
+                return year > 3 && year <= 4;
+            case '4-5':
+                return year > 4 && year <= 5;
+            default:
+                return true;
+        }
+    };
+
     // date filter functions
     const getDateFilterOptions = useCallback(() => {
         const today = new Date();
@@ -247,7 +284,7 @@ const All = () => {
     const getData = useCallback(async (page = 1) => {
         try {
             setLoading(true);
-            const response = await axios.get('https://api.pslink.world/api/plexus/hiringresume/read');
+            const response = await axios.get('http://localhost:5005/api/plexus/hiringresume/read');
             const data = response.data.data;
 
             setOriginalData(data);
@@ -262,7 +299,9 @@ const All = () => {
 
             // Apply experience filter
             if (experienceFilter !== 'all') {
-                positionFilteredData = positionFilteredData.filter(item => item.experience === experienceFilter);
+                positionFilteredData = positionFilteredData.filter(item =>
+                    isExperienceInRange(item.experience, experienceFilter)
+                );
             }
 
             // Apply date filter
@@ -399,6 +438,17 @@ const All = () => {
         if (!formData.reference) newErrors.reference = 'Reference is required';
         if (!formData.experience.trim()) newErrors.experience = 'Experience is required';
 
+        // Validate experience format
+        if (formData.experience.trim()) {
+            const expStr = formData.experience.toLowerCase().trim();
+            if (expStr !== 'fresher') {
+                const regex = /^\d*\.?\d*\s*year?$/i;
+                if (!regex.test(expStr)) {
+                    newErrors.experience = 'Experience should be in format like "0.6 year", "1.5 year", "2 year", or "Fresher"';
+                }
+            }
+        }
+
         const phoneRegex = /^\d{10,15}$/;
         if (formData.phonenumber && !phoneRegex.test(formData.phonenumber.replace(/\D/g, ''))) {
             newErrors.phonenumber = 'Please enter a valid phone number';
@@ -439,8 +489,8 @@ const All = () => {
             }
 
             const endpoint = id
-                ? `https://api.pslink.world/api/plexus/hiringresume/update/${id}`
-                : 'https://api.pslink.world/api/plexus/hiringresume/create';
+                ? `http://localhost:5005/api/plexus/hiringresume/update/${id}`
+                : 'http://localhost:5005/api/plexus/hiringresume/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, submitData, {
@@ -509,7 +559,7 @@ const All = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this hiring record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`https://api.pslink.world/api/plexus/hiringresume/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5005/api/plexus/hiringresume/delete/${id}`);
                 toast.success(response.data.message || 'Hiring record deleted successfully!');
                 getData();
             } catch (err) {
@@ -583,13 +633,6 @@ const All = () => {
         }
     };
 
-    const getExperienceOptions = useCallback(() => {
-        const experiences = originalData
-            .filter(item => item.experience && item.experience.trim())
-            .map(item => item.experience.trim());
-        return [...new Set(experiences)].sort();
-    }, [originalData])
-
     const handleSearch = (e) => {
         const value = e.target.value;
         setSearchTerm(value);
@@ -600,7 +643,7 @@ const All = () => {
 
         // Apply experience filter
         if (experienceFilter !== 'all') {
-            baseData = baseData.filter(item => item.experience === experienceFilter);
+            baseData = baseData.filter(item => isExperienceInRange(item.experience, experienceFilter));
         }
 
         const dateFilteredData = filterDataByDate(baseData, dateFilter, customDateRange);
@@ -625,11 +668,8 @@ const All = () => {
         }
     };
 
-    // Add this function to handle experience filter change
+    // Updated function to handle experience filter change
     const handleExperienceFilterChange = (experience) => {
-        console.log(searchTerm.trim());
-
-
         setExperienceFilter(experience);
         setShowExperienceDropdown(false);
 
@@ -639,7 +679,7 @@ const All = () => {
 
         // Apply experience filter
         if (experience !== 'all') {
-            baseData = baseData.filter(item => item.experience === experience);
+            baseData = baseData.filter(item => isExperienceInRange(item.experience, experience));
         }
 
         const dateFilteredData = filterDataByDate(baseData, dateFilter, customDateRange);
@@ -649,8 +689,6 @@ const All = () => {
             const searchFiltered = dateFilteredData.filter(item =>
                 item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())
             );
-            console.log(searchFiltered);
-
             setFilteredData(searchFiltered);
         } else {
             setFilteredData(dateFilteredData);
@@ -668,7 +706,7 @@ const All = () => {
 
         // Apply experience filter
         if (experienceFilter !== 'all') {
-            baseData = baseData.filter(item => item.experience === experienceFilter);
+            baseData = baseData.filter(item => isExperienceInRange(item.experience, experienceFilter));
         }
 
         const dateFilteredData = filterDataByDate(baseData, dateFilter, customDateRange);
@@ -751,7 +789,7 @@ const All = () => {
         </div>
     );
 
-    // Main component return statement પણ બાકી છે
+    // Main component return statement
     return (
         <div>
             <div className="space-y-6 sticky left-0">
@@ -777,13 +815,6 @@ const All = () => {
                                 )}
                             </div>
                             <div className="flex gap-3">
-                                {/* <button
-                                    onClick={exportSelectedData}
-                                    className="rounded-md border-0 shadow-md px-4 py-2 text-white transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]"
-                                    style={{ background: "#28a745" }}
-                                >
-                                    <FontAwesomeIcon icon={faDownload} className='pe-2' /> Export PDF
-                                </button> */}
                                 <button
                                     onClick={() => toggleModal('add')}
                                     className="rounded-md border-0 shadow-md px-4 py-2 text-white transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]"
@@ -880,7 +911,13 @@ const All = () => {
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm">🎯</span>
                                                 <span className="text-sm">
-                                                    {experienceFilter === 'all' ? 'All Experience' : experienceFilter}
+                                                    {experienceFilter === 'all' ? 'All Experience' :
+                                                        experienceFilter === 'fresher' ? 'Fresher' :
+                                                            experienceFilter === '0-1' ? '0-1 Year' :
+                                                                experienceFilter === '1-2' ? '1-2 Year' :
+                                                                    experienceFilter === '2-3' ? '2-3 Year' :
+                                                                        experienceFilter === '3-4' ? '3-4 Year' :
+                                                                            experienceFilter === '4-5' ? '4-5 Year' : experienceFilter}
                                                 </span>
                                             </div>
                                             <svg className={`w-4 h-4 transition-transform ${showExperienceDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -897,16 +934,48 @@ const All = () => {
                                                 >
                                                     All Experience
                                                 </button>
-                                                {getExperienceOptions().map((experience) => (
-                                                    <button
-                                                        key={experience}
-                                                        onClick={() => handleExperienceFilterChange(experience)}
-                                                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === experience ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
-                                                            }`}
-                                                    >
-                                                        {experience}
-                                                    </button>
-                                                ))}
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('fresher')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === 'fresher' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    Fresher
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('0-1')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '0-1' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    0-1 Year
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('1-2')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '1-2' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    1-2 Year
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('2-3')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '2-3' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    2-3 Year
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('3-4')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '3-4' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    3-4 Year
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExperienceFilterChange('4-5')}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${experienceFilter === '4-5' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                                                        }`}
+                                                >
+                                                    4-5 Year
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -943,7 +1012,6 @@ const All = () => {
                                             </TableHeader>
                                             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05] text-center">
                                                 {currentPageData.length > 0 ? (
-                                                    // Sort data by interview date in descending order (latest first)
                                                     currentPageData
                                                         .sort((a, b) => new Date(b.interviewdate) - new Date(a.interviewdate))
                                                         .map((item, index) => (
@@ -956,7 +1024,7 @@ const All = () => {
                                                                 }}
                                                             >
                                                                 <TableCell className="text-center px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
-                                                                    {index + 1}
+                                                                    {startIndex + index + 1}
                                                                 </TableCell>
                                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                                     {item.name}
@@ -1176,27 +1244,25 @@ const All = () => {
                                         )}
                                     </div>
 
-                                    {/* Experience */}
+                                    {/* Experience - Changed to text input */}
                                     <div className="mb-4">
                                         <label className="block font-medium mb-2">
                                             Experience
+                                            <span className="text-red-500 pl-2 font-normal text-lg">*</span>
                                         </label>
-                                        <select
+                                        <input
+                                            type="text"
                                             name="experience"
                                             value={formData.experience}
                                             onChange={handleInputChange}
                                             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200 ${errors.experience ? 'border-red-500' : 'border-gray-300'
                                                 }`}
+                                            placeholder="e.g., 1.5 year, 2 year, or Fresher"
                                             disabled={isSubmitting}
-                                        >
-                                            <option value="">Select Experience</option>
-                                            <option value="Fresher">Fresher</option>
-                                            <option value="0-1">0-1 Years</option>
-                                            <option value="1-2">1-2 Years</option>
-                                            <option value="2-3">2-3 Years</option>
-                                            <option value="3-4">3-4 Years</option>
-                                            <option value="4-5">4-5 Years</option>
-                                        </select>
+                                        />
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            Enter experience in year (e.g., 0.5 year, 1.2 year, 3 year) or "Fresher"
+                                        </p>
                                         {errors.experience && (
                                             <p className="text-red-500 text-sm mt-1">{errors.experience}</p>
                                         )}
@@ -1222,7 +1288,6 @@ const All = () => {
                                             <p className="text-red-500 text-sm mt-1">{errors.reference}</p>
                                         )}
                                     </div>
-
 
                                     {/* Remark */}
                                     <div className="mb-4 md:col-span-2">

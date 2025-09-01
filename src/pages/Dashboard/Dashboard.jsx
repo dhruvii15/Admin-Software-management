@@ -19,7 +19,7 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
-            const response = await axios.get("https://api.pslink.world/api/plexus/employee/dashboard"); // Change URL as per your API
+            const response = await axios.get("http://localhost:5005/api/plexus/employee/dashboard"); // Change URL as per your API
             console.log(response.data);
 
             if (response.data.status === "Success!") {

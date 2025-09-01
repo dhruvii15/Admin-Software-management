@@ -62,7 +62,7 @@ const Leave = () => {
         try {
             setLoading(true);
             // Replace with your leave API endpoint
-            const response = await axios.get('https://api.pslink.world/api/plexus/leave/read');
+            const response = await axios.get('http://localhost:5005/api/plexus/leave/read');
             setFilteredData(response.data.data);
         } catch (err) {
             console.error(err);
@@ -109,18 +109,10 @@ const Leave = () => {
         today.setHours(0, 0, 0, 0);
         startDate.setHours(0, 0, 0, 0);
 
-        if (formData.startDate && startDate < today) {
-            newErrors.startDate = 'Start date cannot be in the past';
-        }
-
         // End date validation (if provided)
         if (formData.endDate) {
             const endDate = new Date(formData.endDate);
             endDate.setHours(0, 0, 0, 0);
-
-            if (endDate < today) {
-                newErrors.endDate = 'End date cannot be in the past';
-            }
 
             if (formData.startDate && endDate < startDate) {
                 newErrors.endDate = 'End date cannot be before start date';
@@ -143,8 +135,8 @@ const Leave = () => {
             setIsSubmitting(true);
             // Replace with your leave API endpoints
             const endpoint = id
-                ? `https://api.pslink.world/api/plexus/leave/update/${id}`
-                : 'https://api.pslink.world/api/plexus/leave/create';
+                ? `http://localhost:5005/api/plexus/leave/update/${id}`
+                : 'http://localhost:5005/api/plexus/leave/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formData);
@@ -190,7 +182,7 @@ const Leave = () => {
             try {
                 setIsSubmitting(true);
                 // Replace with your leave API endpoint
-                const response = await axios.delete(`https://api.pslink.world/api/plexus/leave/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5005/api/plexus/leave/delete/${id}`);
                 toast.success(response.data.message || 'Leave deleted successfully!');
                 getData();
             } catch (err) {
