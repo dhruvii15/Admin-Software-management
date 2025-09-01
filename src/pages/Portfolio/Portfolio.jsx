@@ -42,7 +42,7 @@ const Portfolio = () => {
 
     const getData = (page = 1) => {
         setLoading(true);
-        axios.post('http://localhost:5005/api/plexus/portfolio/read/admin', { page })
+        axios.post('https://api.pslink.world/api/plexus/portfolio/read/admin', { page })
             .then((res) => {
                 setData(res.data.data);
                 setTotalItems(res.data.totalItems);
@@ -194,8 +194,8 @@ const Portfolio = () => {
                 }
 
                 const request = id !== undefined
-                    ? axios.patch(`http://localhost:5005/api/plexus/portfolio/update/${id}`, requestData, config)
-                    : axios.post('http://localhost:5005/api/plexus/portfolio/create', requestData, config);
+                    ? axios.patch(`https://api.pslink.world/api/plexus/portfolio/update/${id}`, requestData, config)
+                    : axios.post('https://api.pslink.world/api/plexus/portfolio/create', requestData, config);
 
                 const res = await request;
                 console.log('Response:', res);
@@ -248,7 +248,7 @@ const Portfolio = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this portfolio?")) {
             try {
                 setIsSubmitting(true);
-                const res = await axios.delete(`http://localhost:5005/api/plexus/portfolio/delete/${portfolioId}`);
+                const res = await axios.delete(`https://api.pslink.world/api/plexus/portfolio/delete/${portfolioId}`);
                 getData(currentPage);
                 toast.success(res.data.message);
             } catch (err) {

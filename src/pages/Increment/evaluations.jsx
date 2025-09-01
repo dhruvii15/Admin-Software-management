@@ -21,11 +21,28 @@ const Evaluations = () => {
     const [submitting, setSubmitting] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState('');
     const [existingEvaluationData, setExistingEvaluationData] = useState(null);
+    
+    // Function to get previous month and year
+    const getPreviousMonthAndYear = () => {
+        const currentDate = new Date();
+        const previousMonth = currentDate.getMonth(); // getMonth() returns 0-11, so current month - 1 gives us previous month
+        const currentYear = currentDate.getFullYear();
+        
+        // If current month is January (0), previous month should be December (12) of previous year
+        if (previousMonth === 0) {
+            return { month: 12, year: currentYear - 1 };
+        }
+        
+        return { month: previousMonth, year: currentYear };
+    };
+
+    const { month: defaultMonth, year: defaultYear } = getPreviousMonthAndYear();
+
     const [evaluationData, setEvaluationData] = useState({
         employeeId: '',
         employeeName: '',
-        month: new Date().getMonth() + 1,
-        year: new Date().getFullYear(),
+        month: defaultMonth,
+        year: defaultYear,
         grades: {
             work: '',
             speed: '',
@@ -81,7 +98,7 @@ const Evaluations = () => {
     const fetchEmployees = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:5005/api/plexus/employee/read');
+            const response = await fetch('https://api.pslink.world/api/plexus/employee/read');
             if (response.ok) {
                 const data = await response.json();
                 setEmployees(data.data || []);
@@ -98,7 +115,7 @@ const Evaluations = () => {
     const fetchEvaluations = async () => {
         setEvaluationsLoading(true);
         try {
-            const response = await fetch('http://localhost:5005/api/plexus/evaluations/read');
+            const response = await fetch('https://api.pslink.world/api/plexus/evaluations/read');
             if (response.ok) {
                 const data = await response.json();
                 setEvaluations(data.data || []);
@@ -247,13 +264,10 @@ const Evaluations = () => {
             errors.push('Please select a year');
         }
 
-        // Check if all grades are provided
-        const missingGrades = Object.entries(evaluationData.grades)
-            .filter(([key, value]) => !value)
-            .map(([key]) => gradeLabels[key].label);
-
-        if (missingGrades.length > 0) {
-            errors.push(`Please provide grades for: ${missingGrades.join(', ')}`);
+        // Check if at least one grade is provided from any of the 5 categories
+        const providedGrades = Object.values(evaluationData.grades).filter(grade => grade !== '');
+        if (providedGrades.length === 0) {
+            errors.push('Please provide at least one performance grade');
         }
 
         return errors;
@@ -306,7 +320,7 @@ const Evaluations = () => {
                 createdAt: new Date().toISOString()
             };
 
-            const response = await fetch('http://localhost:5005/api/plexus/evaluations/create', {
+            const response = await fetch('https://api.pslink.world/api/plexus/evaluations/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(evaluationPayload)
@@ -316,15 +330,16 @@ const Evaluations = () => {
                 const result = await response.json();
                 toast.success(`Evaluation submitted successfully for ${employeeName}!`);
 
-                // Reset form
+                // Reset form with previous month as default
+                const { month: resetMonth, year: resetYear } = getPreviousMonthAndYear();
                 setSelectedEmployee('');
                 setExistingEvaluationData(null);
                 setEvaluationData({
                     employeeId: '',
                     employeeName: '',
-                    month: new Date().getMonth() + 1,
-                    year: new Date().getFullYear(),
-                    grades: { work: '', speed: '', overall: '', leave: '', time: '', behaviour: '' }
+                    month: resetMonth,
+                    year: resetYear,
+                    grades: { work: '', speed: '', leave: '', time: '', behaviour: '' }
                 });
 
                 // Refresh evaluations list
@@ -347,7 +362,6 @@ const Evaluations = () => {
                 <div className="flex items-center">
                     <FontAwesomeIcon icon={gradeLabels[category].icon} className={`${gradeLabels[category].color} w-5 h-5 mr-2`} />
                     <h3 className="text-md font-semibold text-gray-800">{gradeLabels[category].label}</h3>
-                    <span className="text-red-500 ml-1">*</span>
                 </div>
                 {currentGrade && (
                     <span className={`px-3 py-1 rounded-full text-sm font-bold text-white ${getGradeStyle(currentGrade).color}`}>
@@ -359,12 +373,34 @@ const Evaluations = () => {
                 {gradeOptions.map(option => (
                     <button
                         key={option.value}
+                        type="button"
                         disabled={disabled}
-                        onClick={() => onGradeChange(category, option.value)}
-                        className={`p-3 rounded-xl border-2 transition-all duration-200 text-sm font-medium ${currentGrade === option.value
+                        onClick={(e) => {
+                            // Prevent all default behaviors and scrolling
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // Store current scroll position
+                            const currentScrollY = window.scrollY;
+                            
+                            // Update the grade
+                            onGradeChange(category, option.value);
+                            
+                            // Restore scroll position immediately after state update
+                            requestAnimationFrame(() => {
+                                window.scrollTo(0, currentScrollY);
+                            });
+                            
+                            // Additional fallback to maintain scroll position
+                            setTimeout(() => {
+                                window.scrollTo(0, currentScrollY);
+                            }, 0);
+                        }}
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 text-sm font-medium focus:outline-none ${currentGrade === option.value
                             ? `${option.color} text-white border-transparent`
                             : `${option.bgColor} text-gray-700 border-gray-200 hover:border-gray-300`
                             } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+                        style={{ WebkitTapHighlightColor: 'transparent' }}
                     >
                         {option.label}
                     </button>
@@ -392,7 +428,7 @@ const Evaluations = () => {
 
     return (
         // bg-gradient-to-br from-indigo-50 via-white to-cyan-0
-        <div className="min-h-screen  p-4 sm:p-6 rounded-2xl">
+        <div className="min-h-screen p-4 sm:p-6 rounded-2xl" style={{ scrollBehavior: 'auto' }}>
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className=" mb-8">
@@ -483,6 +519,7 @@ const Evaluations = () => {
                                 <div className="flex items-center mb-6">
                                     <FontAwesomeIcon icon={faChartLine} className="text-purple-600 w-6 h-6 mr-3" />
                                     <h2 className="text-xl font-bold text-gray-800">Performance Evaluation</h2>
+                                    <span className="text-red-500 ml-2 text-sm">(At least one grade required)</span>
                                 </div>
 
                                 <div className="space-y-6">
@@ -501,9 +538,10 @@ const Evaluations = () => {
                             {/* Submit Button */}
                             <div className="flex justify-center">
                                 <button
+                                    type="button"
                                     onClick={handleSubmit}
                                     disabled={submitting || !!existingEvaluationData}
-                                    className="px-7 py-3 bg-[#0777AB] text-white text-lg rounded-xl shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all duration-200"
+                                    className="px-7 py-3 bg-[#0777AB] text-white text-lg rounded-xl shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all duration-200 focus:outline-none"
                                 >
                                     {submitting ? 'Submitting Evaluation...' : 'Submit Monthly Evaluation'}
                                 </button>

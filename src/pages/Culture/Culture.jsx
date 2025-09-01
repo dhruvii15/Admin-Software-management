@@ -125,7 +125,7 @@ const Culture = () => {
 
     const getData = (page = 1) => {
         setLoading(true);
-        axios.post('http://localhost:5005/api/plexus/culture/read', { page })
+        axios.post('https://api.pslink.world/api/plexus/culture/read', { page })
             .then((res) => {
                 setData(res.data.data);
                 setTotalItems(res.data.totalItems);
@@ -250,8 +250,8 @@ const Culture = () => {
             };
 
             const request = id !== undefined
-                ? axios.patch(`http://localhost:5005/api/plexus/culture/update/${id}`, formData, config)
-                : axios.post('http://localhost:5005/api/plexus/culture/create', formData, config);
+                ? axios.patch(`https://api.pslink.world/api/plexus/culture/update/${id}`, formData, config)
+                : axios.post('https://api.pslink.world/api/plexus/culture/create', formData, config);
 
             const res = await request;
             resetForm();
@@ -295,7 +295,7 @@ const Culture = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this Culture Details?")) {
             try {
                 setIsSubmitting(true);
-                const res = await axios.delete(`http://localhost:5005/api/plexus/culture/delete/${itemId}`);
+                const res = await axios.delete(`https://api.pslink.world/api/plexus/culture/delete/${itemId}`);
                 getData(currentPage);
                 toast.success(res.data.message);
             } catch (err) {

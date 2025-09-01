@@ -103,7 +103,7 @@ const Salary = () => {
         try {
             setLoading(true);
             // Replace with your salary API endpoint
-            const response = await axios.get('http://localhost:5005/api/plexus/employee/salary/read');
+            const response = await axios.get('https://api.pslink.world/api/plexus/employee/salary/read');
             const data = response.data.data;
             setOriginalData(data);
             setFilteredData(data);
@@ -237,8 +237,8 @@ const Salary = () => {
 
             // Replace with your salary API endpoints
             const endpoint = id
-                ? `http://localhost:5005/api/plexus/employee/salary/update/${id}`
-                : 'http://localhost:5005/api/plexus/employee/salary/create';
+                ? `https://api.pslink.world/api/plexus/employee/salary/update/${id}`
+                : 'https://api.pslink.world/api/plexus/employee/salary/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formDataToSend, {
@@ -293,7 +293,7 @@ const Salary = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this salary record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`http://localhost:5005/api/plexus/employee/salary/delete/${id}`);
+                const response = await axios.delete(`https://api.pslink.world/api/plexus/employee/salary/delete/${id}`);
                 toast.success(response.data.message || 'Salary deleted successfully!');
                 getData();
             } catch (err) {
@@ -336,7 +336,7 @@ const Salary = () => {
             setIsUpdatingEmployee(true);
 
             // Call update API
-            const response = await axios.patch(`http://localhost:5005/api/plexus/employee/salary/update/${id}`, {
+            const response = await axios.patch(`https://api.pslink.world/api/plexus/employee/salary/update/${id}`, {
                 remark: employeeRemark,
                 name: employeename
             });
@@ -367,8 +367,14 @@ const Salary = () => {
         setEmployeeRemark("");
     };
 
+    // UPDATED CSV export to include total pay salary amount
     const exportToCSV = () => {
         const headers = ['Name', 'Present Days', 'Absent Days', 'Weekly Off', 'Total Days', 'Total Salary', 'Pay Salary', 'Cut Salary', 'Remark'];
+        
+        // Calculate total pay salary
+        const totalPaySalary = salaryData.reduce((sum, emp) => sum + (emp.paySalary || 0), 0);
+        const totalSalaryAmount = salaryData.reduce((sum, emp) => sum + (emp.totalSalary || 0), 0);
+        
         const csvContent = [
             headers.join(','),
             ...salaryData.map(row => [
@@ -381,7 +387,9 @@ const Salary = () => {
                 row.paySalary,
                 row.cutSalary,
                 `"${row.remark || ''}"`
-            ].join(','))
+            ].join(',')),
+            // Add totals row
+            ['TOTALS', '', '', '', '', Math.round(totalSalaryAmount), Math.round(totalPaySalary), '', ''].join(',')
         ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -393,6 +401,12 @@ const Salary = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    // HELPER FUNCTION: Calculate total pay salary for a salary record
+    const calculateTotalPaySalary = (employees) => {
+        if (!employees || !Array.isArray(employees)) return 0;
+        return employees.reduce((sum, emp) => sum + (emp.paySalary || 0), 0);
     };
 
     if (loading) return (
@@ -481,6 +495,7 @@ const Salary = () => {
                                         <TableCell isHeader className="py-4 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Index</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Month</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Year</TableCell>
+                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Total Pay Salary</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">PDF-File</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Report</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Actions</TableCell>
@@ -498,6 +513,12 @@ const Salary = () => {
                                                 </TableCell>
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {salary.year}
+                                                </TableCell>
+                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
+                                                    <span className="text-sm font-semibold text-green-600">
+                                                        <i className="fas fa-rupee-sign mr-1"></i>
+                                                        {Math.round(calculateTotalPaySalary(salary.employees))}
+                                                    </span>
                                                 </TableCell>
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {salary.pdf ? (
@@ -533,7 +554,7 @@ const Salary = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={6} className="text-center pt-5 pb-4 dark:text-gray-200">No Data Found</td>
+                                            <td colSpan={7} className="text-center pt-5 pb-4 dark:text-gray-200">No Data Found</td>
                                         </tr>
                                     )}
                                 </TableBody>
@@ -734,7 +755,7 @@ const Salary = () => {
             )}
 
             {/* Employee Details Modal */}
-            {isOpen && (
+           {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-99999">
                     <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
                         {/* Header */}
@@ -754,8 +775,6 @@ const Salary = () => {
                                     <i className="fas fa-times text-xl"></i>
                                 </button>
                             </div>
-
-
                         </div>
 
                         {/* Export Buttons */}
@@ -828,10 +847,10 @@ const Salary = () => {
                                                     <i className="fas fa-check mr-1"></i>
                                                     {employee.present}
                                                 </span>
-                                            </td><td className="px-6 py-4 text-center border-b border-gray-200">
+                                            </td>
+                                            <td className="px-6 py-4 text-center border-b border-gray-200">
                                                 <span
                                                     className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${employee.absent > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'} cursor-pointer relative group`}
-                                                // title={employee.remark}
                                                 >
                                                     <i className="fas fa-times mr-1"></i>
                                                     {employee.absent}
@@ -848,11 +867,8 @@ const Salary = () => {
                                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
                                                         </div>
                                                     )}
-
-
                                                 </span>
                                             </td>
-
                                             <td className="px-6 py-4 text-center border-b border-gray-200">
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                                                     <i className="fas fa-calendar-day mr-1"></i>
@@ -913,11 +929,6 @@ const Salary = () => {
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center justify-center gap-2">
-                                                        {/* {employee.remark && (
-                                                            <span className="text-xs text-gray-600 dark:text-gray-400 max-w-20 truncate" title={employee.remark}>
-                                                                {employee.remark}
-                                                            </span>
-                                                        )} */}
                                                         <button
                                                             onClick={() => handleEmployeeEdit(employee)}
                                                             className="text-blue-600 hover:text-blue-800 transition-colors p-1"
@@ -930,6 +941,50 @@ const Salary = () => {
                                             </td>
                                         </tr>
                                     ))}
+                                    
+                                    {/* Totals Row */}
+                                    <tr className="bg-gray-100 dark:bg-gray-700 border-t-2 border-gray-300 dark:border-gray-600">
+                                        <td className="px-6 py-4 border-b border-gray-200">
+                                            <div className="flex items-center">
+                                                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-3">
+                                                    <i className="fas fa-calculator"></i>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-gray-200">TOTAL</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200">
+                                            
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200">
+                                            
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200">
+                                            
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200">
+                                            
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200">
+                                            <span className="text-sm font-bold text-gray-900 dark:text-gray-200">
+                                                <i className="fas fa-rupee-sign mr-1"></i>
+                                                {Math.round(salaryData.reduce((sum, emp) => sum + (emp.totalSalary || 0), 0))}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200">
+                                            
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200">
+                                            <span className="text-sm font-bold text-green-600">
+                                                <i className="fas fa-rupee-sign mr-1"></i>
+                                                {Math.round(salaryData.reduce((sum, emp) => sum + (emp.paySalary || 0), 0))}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200">
+                                            
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
