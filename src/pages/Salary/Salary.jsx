@@ -511,6 +511,12 @@ const Salary = () => {
         return employees.reduce((sum, emp) => sum + (emp.paySalary || 0), 0);
     };
 
+    const handleClearAll = () => {
+        setSelectedRows(new Set());
+        setSelectedYear("");
+        getData();
+    };
+
     if (loading) return (
         <div
             style={{
@@ -578,15 +584,31 @@ const Salary = () => {
                                         <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
                                             {selectedRows.size} row{selectedRows.size > 1 ? 's' : ''} selected
                                         </span>
-                                        <Button
-                                            onClick={handleCalculate}
-                                            className="rounded-md border-0 shadow-md px-3 py-1 text-white text-sm"
-                                            style={{ background: "#10B981" }}
-                                        >
-                                            <FontAwesomeIcon icon={faCalculator} className='pe-1' /> Calculate Total
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={handleCalculate}
+                                                className="rounded-md border-0 shadow-md px-3 py-1 text-white text-sm"
+                                                style={{ background: "#10B981" }}
+                                            >
+                                                <FontAwesomeIcon icon={faCalculator} className='pe-1' /> Calculate Total
+                                            </Button>
+                                        </div>
                                     </div>
                                 )}
+
+                                {(selectedRows.size > 0 || (selectedYear && selectedYear !== "" && selectedYear !== "All Years")) && (
+                                    <div className="flex items-center gap-3 py-2 rounded-lg">
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={handleClearAll}
+                                                className="rounded-md border-0 py-1 text-sm text-[#0777ab]"
+                                            >
+                                                Clear All
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+
                             </div>
 
                             {/* Add Button */}
