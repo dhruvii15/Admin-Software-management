@@ -5,7 +5,7 @@ import { Button } from "react-bootstrap";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faPlus, faTrash, faArrowUpFromBracket, faFileArrowUp, faEye, faFileInvoice, faChevronDown, faSave, faTimes, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faPlus, faTrash, faArrowUpFromBracket, faFileArrowUp, faEye, faFileInvoice, faChevronDown, faSave, faTimes, faCheck, faCalculator } from "@fortawesome/free-solid-svg-icons";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 
 const Salary = () => {
@@ -26,10 +26,19 @@ const Salary = () => {
     const [isYearFilterOpen, setIsYearFilterOpen] = useState(false);
     const yearFilterRef = useRef(null);
 
+    // New state for row selection and calculation
+    const [selectedRows, setSelectedRows] = useState(new Set());
+    const [showCalculationModal, setShowCalculationModal] = useState(false);
+    const [calculatedTotal, setCalculatedTotal] = useState(0);
+    const [selectedRowsData, setSelectedRowsData] = useState([]);
+
     // New state for employee editing
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [employeeRemark, setEmployeeRemark] = useState("");
     const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false);
+
+    // Add ref for calculation modal
+    const calculationModalRef = useRef(null);
 
     // Helper function to get month number for sorting
     const getMonthNumber = (monthName) => {
@@ -55,6 +64,47 @@ const Salary = () => {
         });
     };
 
+    // New function to handle row selection
+    const handleRowSelection = (salaryId, isSelected) => {
+        const newSelectedRows = new Set(selectedRows);
+        if (isSelected) {
+            newSelectedRows.add(salaryId);
+        } else {
+            newSelectedRows.delete(salaryId);
+        }
+        setSelectedRows(newSelectedRows);
+    };
+
+    // New function to handle select all
+    const handleSelectAll = (isSelected) => {
+        if (isSelected) {
+            const allIds = new Set(filteredData.map(salary => salary._id));
+            setSelectedRows(allIds);
+        } else {
+            setSelectedRows(new Set());
+        }
+    };
+
+    // New function to calculate total for selected rows
+    const handleCalculate = () => {
+        if (selectedRows.size === 0) {
+            toast.warning("Please select at least one row to calculate.");
+            return;
+        }
+
+        const selectedData = filteredData.filter(salary => selectedRows.has(salary._id));
+        const total = selectedData.reduce((sum, salary) => {
+            const salaryAmount = salary.total
+                ? salary.total
+                : calculateTotalPaySalary(salary.employees);
+            return sum + salaryAmount;
+        }, 0);
+
+        setSelectedRowsData(selectedData);
+        setCalculatedTotal(total);
+        setShowCalculationModal(true);
+    };
+
     // Add this useEffect to handle clicking outside the year filter dropdown
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -69,10 +119,29 @@ const Salary = () => {
         };
     }, []);
 
+    // Add this useEffect to handle clicking outside the calculation modal
+    useEffect(() => {
+        const handleClickOutsideModal = (event) => {
+            if (calculationModalRef.current && !calculationModalRef.current.contains(event.target)) {
+                setShowCalculationModal(false);
+            }
+        };
+
+        if (showCalculationModal) {
+            document.addEventListener('mousedown', handleClickOutsideModal);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideModal);
+        };
+    }, [showCalculationModal]);
+
     // Function to handle year selection - UPDATED to maintain sort order
     const handleYearSelection = (year) => {
         setSelectedYear(year);
         setIsYearFilterOpen(false);
+        // Clear selected rows when filter changes
+        setSelectedRows(new Set());
 
         // Filter the data based on selected year
         let filtered;
@@ -138,6 +207,8 @@ const Salary = () => {
 
             setOriginalData(sortedData);
             setFilteredData(sortedData);
+            // Clear selections when data refreshes
+            setSelectedRows(new Set());
         } catch (err) {
             console.error(err);
             toast.error("Failed to fetch salary data.");
@@ -469,7 +540,7 @@ const Salary = () => {
                     <div className="px-6 pt-5">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 mt-4 dark:border-gray-800 border-gray-200 gap-4">
                             {/* Year Filter */}
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 flex-wrap">
                                 <div className="relative inline-block w-48" ref={yearFilterRef}>
                                     <button
                                         className="w-full flex items-center justify-between px-4 py-2 bg-white dark:border-gray-800 border rounded-md text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300"
@@ -500,6 +571,22 @@ const Salary = () => {
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Selection Info */}
+                                {selectedRows.size > 0 && (
+                                    <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-800">
+                                        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                            {selectedRows.size} row{selectedRows.size > 1 ? 's' : ''} selected
+                                        </span>
+                                        <Button
+                                            onClick={handleCalculate}
+                                            className="rounded-md border-0 shadow-md px-3 py-1 text-white text-sm"
+                                            style={{ background: "#10B981" }}
+                                        >
+                                            <FontAwesomeIcon icon={faCalculator} className='pe-1' /> Calculate Total
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Add Button */}
@@ -523,6 +610,14 @@ const Salary = () => {
                             <Table>
                                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                                     <TableRow>
+                                        <TableCell isHeader className="py-4 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={filteredData.length > 0 && selectedRows.size === filteredData.length}
+                                                onChange={(e) => handleSelectAll(e.target.checked)}
+                                                className="w-4 h-4 text-[#0777ab] bg-gray-100 border-gray-300 rounded focus:ring-[#0777ab] dark:focus:ring-[#0777ab] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                            />
+                                        </TableCell>
                                         <TableCell isHeader className="py-4 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Index</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Month</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Year</TableCell>
@@ -535,7 +630,18 @@ const Salary = () => {
                                 <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05] text-center">
                                     {filteredData.length > 0 ? (
                                         filteredData.map((salary, index) => (
-                                            <TableRow key={salary._id}>
+                                            <TableRow
+                                                key={salary._id}
+                                                className={selectedRows.has(salary._id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                                            >
+                                                <TableCell className="text-center px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedRows.has(salary._id)}
+                                                        onChange={(e) => handleRowSelection(salary._id, e.target.checked)}
+                                                        className="w-4 h-4 text-[#0777ab] bg-gray-100 border-gray-300 rounded focus:ring-[#0777ab] dark:focus:ring-[#0777ab] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                                    />
+                                                </TableCell>
                                                 <TableCell className="text-center px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     {index + 1}
                                                 </TableCell>
@@ -590,7 +696,7 @@ const Salary = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={7} className="text-center pt-5 pb-4 dark:text-gray-200">No Data Found</td>
+                                            <td colSpan={8} className="text-center pt-5 pb-4 dark:text-gray-200">No Data Found</td>
                                         </tr>
                                     )}
                                 </TableBody>
@@ -599,6 +705,108 @@ const Salary = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Calculation Results Modal */}
+            {showCalculationModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-99999">
+                    <div 
+                        ref={calculationModalRef}
+                        className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden"
+                    >
+                        {/* Header */}
+                        <div className="bg-[#0777ab] text-white p-4 px-6 relative">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-white/20 rounded-full w-14 h-14 flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faCalculator} className="text-2xl" />
+                                    </div>
+
+                                    <div>
+                                        <h2 className="text-2xl">Calculation Summary</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        {/* Selected Records Details */}
+                        <div className="p-6">
+                            <div className="overflow-auto max-h-92 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-200 border-b">
+                                                Month & Year
+                                            </th>
+                                            <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-200 border-b">
+                                                Pay Salary Amount
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedRowsData.map((salary, index) => {
+                                            const amount = salary.total ? salary.total : calculateTotalPaySalary(salary.employees);
+
+                                            return (
+                                                <tr key={salary._id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-25 dark:bg-gray-850'}`}>
+                                                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700">
+                                                        <div className="flex items-center gap-2">
+                                                            {/* <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                                                                {salary.month.charAt(0)}
+                                                            </div> */}
+                                                            <div>
+                                                                <div className="font-medium">{salary.month} {salary.year}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-right border-b border-gray-100 dark:border-gray-700">
+                                                        <span className="font-semibold text-green-600">
+                                                            <i className="fas fa-rupee-sign mr-1"></i>
+                                                            {Math.round(amount).toLocaleString('en-IN')}
+                                                        </span>
+                                                    </td>
+
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                    <tfoot className="sticky bottom-0">
+                                        <tr>
+                                            <td className="px-4 py-4 text-left text-sm font-bold border-t-2 border-[#0777ab]">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                                                        <FontAwesomeIcon icon={faCalculator} className="fs-3" />
+                                                    </div>
+                                                    <span>TOTAL</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 text-right text-sm font-bold border-t-2 border-[#0777ab]">
+                                                <div className="text-lg">
+                                                    <i className="fas fa-rupee-sign mr-1"></i>
+                                                    {Math.round(calculatedTotal).toLocaleString('en-IN')}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="bg-gray-50 dark:bg-gray-800 px-6 py-2 flex justify-end items-center border-t">
+                            <Button
+                                onClick={() => setShowCalculationModal(false)}
+                                className="rounded-md border-0 text-white px-4 py-2 w-32"
+                                style={{ background: "#0777AB" }}
+                            >
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            
 
             {/* Modal for Add/Edit Salary */}
             {visible && (
