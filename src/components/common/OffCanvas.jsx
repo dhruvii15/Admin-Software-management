@@ -11,7 +11,7 @@ const OffCanvas = ({ name, onClose }) => {
     const [loading, setLoading] = useState(true);
 
     const getCoverImage = (name) => {
-        axios.post('https://api.pslink.world/api/cover/tagName/find', { name }) // Send name in request body
+        axios.post('http://localhost:5004/api/cover/tagName/find', { name }) // Send name in request body
             .then((res) => {
                 setCoverImage(res.data.data);
                 setLoading(false);

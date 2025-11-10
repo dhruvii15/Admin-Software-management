@@ -50,7 +50,8 @@ const Evaluations = () => {
             leave: '',
             time: '',
             behaviour: ''
-        }
+        },
+        notes: ''
     });
 
     const months = [
@@ -78,12 +79,12 @@ const Evaluations = () => {
     ];
 
     const gradeLabels = {
-        work: { icon: faBriefcase, label: 'Work Performance', color: 'text-blue-600' },
-        speed: { icon: faBriefcase, label: 'Work Speed & Efficiency', color: 'text-indigo-600' },
+        work: { icon: faBriefcase, label: 'Work Performance', name : 'Vrushabh sir', color: 'text-blue-600' },
+        speed: { icon: faBriefcase, label: 'Work Speed & Efficiency',name : 'Vrushabh sir', color: 'text-indigo-600' },
         // overall: { icon: faTarget, label: 'Overall Performance', color: 'text-emerald-600' },
-        leave: { icon: faCalendar, label: 'Leave Management', color: 'text-green-600' },
-        time: { icon: faClock, label: 'Time Management', color: 'text-purple-600' },
-        behaviour: { icon: faUserCheck, label: 'Behaviour & Attitude', color: 'text-orange-600' }
+        leave: { icon: faCalendar, label: 'Leave Management', name : 'HR',color: 'text-green-600' },
+        time: { icon: faClock, label: 'Time Management', name : 'HR',color: 'text-purple-600' },
+        behaviour: { icon: faUserCheck, label: 'Behaviour & Attitude', name : 'HR',color: 'text-orange-600' }
     };
 
     useEffect(() => {
@@ -98,7 +99,7 @@ const Evaluations = () => {
     const fetchEmployees = async () => {
         setLoading(true);
         try {
-            const response = await fetch('https://api.pslink.world/api/plexus/employee/read');
+            const response = await fetch('http://localhost:5004/api/plexus/employee/read');
             if (response.ok) {
                 const data = await response.json();
                 setEmployees(data.data || []);
@@ -111,11 +112,18 @@ const Evaluations = () => {
             setLoading(false);
         }
     };
+    const handleNotesChange = (e) => {
+        setEvaluationData(prev => ({
+            ...prev,
+            notes: e.target.value
+        }));
+    };
+
 
     const fetchEvaluations = async () => {
         setEvaluationsLoading(true);
         try {
-            const response = await fetch('https://api.pslink.world/api/plexus/evaluations/read');
+            const response = await fetch('http://localhost:5004/api/plexus/evaluations/read');
             if (response.ok) {
                 const data = await response.json();
                 setEvaluations(data.data || []);
@@ -320,7 +328,7 @@ const Evaluations = () => {
                 createdAt: new Date().toISOString()
             };
 
-            const response = await fetch('https://api.pslink.world/api/plexus/evaluations/create', {
+            const response = await fetch('http://localhost:5004/api/plexus/evaluations/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(evaluationPayload)
@@ -339,7 +347,8 @@ const Evaluations = () => {
                     employeeName: '',
                     month: resetMonth,
                     year: resetYear,
-                    grades: { work: '', speed: '', leave: '', time: '', behaviour: '' }
+                    grades: { work: '', speed: '', leave: '', time: '', behaviour: '' },
+                    notes: ''
                 });
 
                 // Refresh evaluations list
@@ -363,7 +372,7 @@ const Evaluations = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center">
                     <FontAwesomeIcon icon={gradeLabels[category].icon} className={`${gradeLabels[category].color} w-5 h-5 mr-2`} />
-                    <h3 className="text-md font-semibold text-gray-800">{gradeLabels[category].label}</h3>
+                    <h3 className="text-md font-semibold text-gray-800">{gradeLabels[category].label} <span className="text-gray-400 font-normal">({gradeLabels[category].name})</span></h3>
                 </div>
                 {currentGrade && (
                     <span className={`px-3 py-1 rounded-full text-sm font-bold text-white ${getGradeStyle(currentGrade).color}`}>
@@ -501,6 +510,20 @@ const Evaluations = () => {
                                     </div>
 
 
+                                </div>
+
+                                <div className="md:col-span-2 pt-3">
+                                    <label className="block text-sm font-semibold text-gray-700 my-2">
+                                        Notes (Optional)
+                                    </label>
+                                    <textarea
+                                        value={evaluationData.notes}
+                                        onChange={handleNotesChange}
+                                        placeholder="Add any additional comments or observations..."
+                                        rows="3"
+                                        className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none"
+                                        disabled={!!existingEvaluationData}
+                                    />
                                 </div>
 
                                 {/* Existing Evaluation Warning */}

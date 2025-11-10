@@ -62,7 +62,7 @@ const Leave = () => {
         try {
             setLoading(true);
             // Replace with your leave API endpoint
-            const response = await axios.get('https://api.pslink.world/api/plexus/leave/read');
+            const response = await axios.get('http://localhost:5004/api/plexus/leave/read');
             setFilteredData(response.data.data);
         } catch (err) {
             console.error(err);
@@ -135,8 +135,8 @@ const Leave = () => {
             setIsSubmitting(true);
             // Replace with your leave API endpoints
             const endpoint = id
-                ? `https://api.pslink.world/api/plexus/leave/update/${id}`
-                : 'https://api.pslink.world/api/plexus/leave/create';
+                ? `http://localhost:5004/api/plexus/leave/update/${id}`
+                : 'http://localhost:5004/api/plexus/leave/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formData);
@@ -182,7 +182,7 @@ const Leave = () => {
             try {
                 setIsSubmitting(true);
                 // Replace with your leave API endpoint
-                const response = await axios.delete(`https://api.pslink.world/api/plexus/leave/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5004/api/plexus/leave/delete/${id}`);
                 toast.success(response.data.message || 'Leave deleted successfully!');
                 getData();
             } catch (err) {

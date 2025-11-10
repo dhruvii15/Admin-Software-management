@@ -25,6 +25,8 @@ const Salary = () => {
     const [selectedYear, setSelectedYear] = useState("");
     const [isYearFilterOpen, setIsYearFilterOpen] = useState(false);
     const yearFilterRef = useRef(null);
+    const [completingIds, setCompletingIds] = useState(new Set());
+
 
     // New state for row selection and calculation
     const [selectedRows, setSelectedRows] = useState(new Set());
@@ -199,7 +201,7 @@ const Salary = () => {
         try {
             setLoading(true);
             // Replace with your salary API endpoint
-            const response = await axios.get('https://api.pslink.world/api/plexus/employee/salary/read');
+            const response = await axios.get('http://localhost:5004/api/plexus/employee/salary/read');
             const data = response.data.data;
 
             // Sort the data in descending order (latest first)
@@ -339,8 +341,8 @@ const Salary = () => {
 
             // Replace with your salary API endpoints
             const endpoint = id
-                ? `https://api.pslink.world/api/plexus/employee/salary/update/${id}`
-                : 'https://api.pslink.world/api/plexus/employee/salary/create';
+                ? `http://localhost:5004/api/plexus/employee/salary/update/${id}`
+                : 'http://localhost:5004/api/plexus/employee/salary/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formDataToSend, {
@@ -395,7 +397,7 @@ const Salary = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this salary record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`https://api.pslink.world/api/plexus/employee/salary/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5004/api/plexus/employee/salary/delete/${id}`);
                 toast.success(response.data.message || 'Salary deleted successfully!');
                 getData();
             } catch (err) {
@@ -403,6 +405,29 @@ const Salary = () => {
                 toast.error(err.response?.data?.message || "An error occurred. Please try again.");
             } finally {
                 setIsSubmitting(false);
+            }
+        }
+    };
+
+    const handleComplete = async (salaryId) => {
+        if (!isSubmitting && window.confirm("Mark this salary as paid/completed?")) {
+            try {
+                setCompletingIds(prev => new Set(prev).add(salaryId));
+                const response = await axios.patch(
+                    `http://localhost:5004/api/plexus/employee/salary/update/${salaryId}`,
+                    { completed: true }
+                );
+                toast.success(response.data.message || 'Salary marked as completed!');
+                getData();
+            } catch (err) {
+                console.error(err);
+                toast.error(err.response?.data?.message || "An error occurred. Please try again.");
+            } finally {
+                setCompletingIds(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(salaryId);
+                    return newSet;
+                });
             }
         }
     };
@@ -438,7 +463,7 @@ const Salary = () => {
             setIsUpdatingEmployee(true);
 
             // Call update API
-            const response = await axios.patch(`https://api.pslink.world/api/plexus/employee/salary/update/${id}`, {
+            const response = await axios.patch(`http://localhost:5004/api/plexus/employee/salary/update/${id}`, {
                 remark: employeeRemark,
                 name: employeename
             });
@@ -644,6 +669,9 @@ const Salary = () => {
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Month</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Year</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Total Pay Salary</TableCell>
+                                        <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">
+                                            Status
+                                        </TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">PDF-File</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Report</TableCell>
                                         <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Actions</TableCell>
@@ -654,7 +682,11 @@ const Salary = () => {
                                         filteredData.map((salary, index) => (
                                             <TableRow
                                                 key={salary._id}
-                                                className={selectedRows.has(salary._id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                                                className={`
+        ${selectedRows.has(salary._id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} 
+        ${salary.completed ? 'opacity-40' : ''}
+        transition-opacity duration-200
+    `}
                                             >
                                                 <TableCell className="text-center px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                     <input
@@ -682,6 +714,31 @@ const Salary = () => {
                                                                 : calculateTotalPaySalary(salary.employees)
                                                         )}
                                                     </span>
+                                                </TableCell>
+                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
+                                                    {salary.completed ? (
+                                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                                            <FontAwesomeIcon icon={faCheck} className="mr-1" /> Paid
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleComplete(salary._id)}
+                                                            disabled={completingIds.has(salary._id)}
+                                                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title="Mark as paid"
+                                                        >
+                                                            {completingIds.has(salary._id) ? (
+                                                                <>
+                                                                    <div className="w-3 h-3 border border-blue-600 border-t-transparent rounded-full animate-spin mr-1"></div>
+                                                                    Processing...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <FontAwesomeIcon icon={faCheck} className="mr-1" /> Mark Paid
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    )}
                                                 </TableCell>
 
                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
@@ -718,7 +775,7 @@ const Salary = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={8} className="text-center pt-5 pb-4 dark:text-gray-200">No Data Found</td>
+                                            <td colSpan={9} className="text-center pt-5 pb-4 dark:text-gray-200">No Data Found</td>
                                         </tr>
                                     )}
                                 </TableBody>
@@ -731,7 +788,7 @@ const Salary = () => {
             {/* Calculation Results Modal */}
             {showCalculationModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-99999">
-                    <div 
+                    <div
                         ref={calculationModalRef}
                         className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden"
                     >
@@ -828,7 +885,7 @@ const Salary = () => {
                 </div>
             )}
 
-            
+
 
             {/* Modal for Add/Edit Salary */}
             {visible && (

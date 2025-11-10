@@ -19,7 +19,7 @@ const DashWeb = () => {
 
     const getData = () => {
         setLoading(true);
-        axios.get('https://api.pslink.world/api/plexus/portfolio/read')
+        axios.get('http://localhost:5004/api/plexus/portfolio/read')
             .then((res) => {
                 setData(res.data.data);
                 setLoading(false);
@@ -32,7 +32,7 @@ const DashWeb = () => {
 
     const getData2 = () => {
         setLoading(true);
-        axios.post('https://api.pslink.world/api/plexus/culture/read')
+        axios.post('http://localhost:5004/api/plexus/culture/read')
             .then((res) => {
                 const sortedData = res.data.data.sort((a, b) => new Date(b.dateOfHiring) - new Date(a.dateOfHiring));
                 setData2(sortedData);
@@ -46,7 +46,7 @@ const DashWeb = () => {
 
     const getData3 = () => {
         setLoading(true);
-        axios.get('https://api.pslink.world/api/plexus/position/read')
+        axios.get('http://localhost:5004/api/plexus/position/read')
             .then((res) => {
                 const filteredData = res.data.data.filter(item => item.status === true);
                 setData3(filteredData);
@@ -59,7 +59,7 @@ const DashWeb = () => {
     };
 
     const getAdminData = () => {
-        axios.get('https://api.pslink.world/api/plexus/admin/read')
+        axios.get('http://localhost:5004/api/plexus/admin/read')
             .then((res) => {
                 setIsOn(res.data.data[0]?.hiringStatus === true || res.data.data[0]?.hiringStatus === "true");
                 setAdminId(res.data.data[0]?._id);
@@ -74,7 +74,7 @@ const DashWeb = () => {
         setIsOn(newState);
 
         try {
-            const response = await axios.patch(`https://api.pslink.world/api/plexus/admin/update/${adminId}`, { hiringStatus: newState });
+            const response = await axios.patch(`http://localhost:5004/api/plexus/admin/update/${adminId}`, { hiringStatus: newState });
             toast.success(response.data.message);
             getAdminData();
         } catch (error) {

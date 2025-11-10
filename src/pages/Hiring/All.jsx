@@ -67,8 +67,35 @@ const All = () => {
         resume: '',
         reference: '',
         experience: '',
+        experienceStartDate: '', // Add this
+        experienceEndDate: '',   // Add this
         status: 'all'
     });
+
+    const getCurrentMonth = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
+    };
+
+    const calculateExperience = (startDate, endDate) => {
+        if (!startDate || !endDate) return '';
+
+        const start = new Date(startDate + '-01'); // Add day for valid date
+        const end = new Date(endDate + '-01');
+
+        if (start >= end) return '';
+
+        const diffTime = Math.abs(end - start);
+        const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+
+        // Round to 1 decimal place
+        const years = Math.round(diffYears * 10) / 10;
+
+        if (years === 0) return 'Fresher';
+        return years === 1 ? '1 year' : `${years} year`;
+    };
 
     // Check if coming from dashboard with selected position or add mode
     useEffect(() => {
@@ -137,6 +164,8 @@ const All = () => {
                     resume: '',
                     reference: '',
                     experience: '',
+                    experienceStartDate: '', // Add this
+                    experienceEndDate: '',   // Add this
                     status: 'all'
                 });
                 setId(undefined);
@@ -284,7 +313,7 @@ const All = () => {
     const getData = useCallback(async (page = 1) => {
         try {
             setLoading(true);
-            const response = await axios.get('https://api.pslink.world/api/plexus/hiringresume/read');
+            const response = await axios.get('http://localhost:5004/api/plexus/hiringresume/read');
             const data = response.data.data;
 
             setOriginalData(data);
@@ -331,10 +360,21 @@ const All = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => {
+            const newData = {
+                ...prev,
+                [name]: value
+            };
+
+            // Auto-calculate experience when dates change
+            if (name === 'experienceStartDate' || name === 'experienceEndDate') {
+                const startDate = name === 'experienceStartDate' ? value : prev.experienceStartDate;
+                const endDate = name === 'experienceEndDate' ? value : prev.experienceEndDate;
+                newData.experience = calculateExperience(startDate, endDate);
+            }
+
+            return newData;
+        });
 
         if (errors[name]) {
             setErrors(prev => {
@@ -436,16 +476,15 @@ const All = () => {
         if (!formData.phonenumber.trim()) newErrors.phonenumber = 'Phone number is required';
         if (!formData.resume) newErrors.resume = 'Resume is required';
         if (!formData.reference) newErrors.reference = 'Reference is required';
-        if (!formData.experience.trim()) newErrors.experience = 'Experience is required';
 
-        // Validate experience format
-        if (formData.experience.trim()) {
-            const expStr = formData.experience.toLowerCase().trim();
-            if (expStr !== 'fresher') {
-                const regex = /^\d*\.?\d*\s*year?$/i;
-                if (!regex.test(expStr)) {
-                    newErrors.experience = 'Experience should be in format like "0.6 year", "1.5 year", "2 year", or "Fresher"';
-                }
+        // Updated experience validation
+        // if (!formData.experienceStartDate) newErrors.experienceStartDate = 'Experience start date is required';
+        // if (!formData.experienceEndDate) newErrors.experienceEndDate = 'Experience end date is required';
+        if (formData.experienceStartDate && formData.experienceEndDate) {
+            const start = new Date(formData.experienceStartDate + '-01');
+            const end = new Date(formData.experienceEndDate + '-01');
+            if (start >= end) {
+                newErrors.experienceEndDate = 'End date must be after start date';
             }
         }
 
@@ -476,6 +515,8 @@ const All = () => {
             submitData.append('reference', formData.reference);
             submitData.append('status', formData.status);
             submitData.append('experience', formData.experience);
+            submitData.append('experienceStartDate', formData.experienceStartDate); // Add this
+            submitData.append('experienceEndDate', formData.experienceEndDate);     // Add this
 
             const combinedDateTime = combineDateTime(formData.interviewdate, formData.interviewtime);
             submitData.append('interviewdate', combinedDateTime);
@@ -489,8 +530,8 @@ const All = () => {
             }
 
             const endpoint = id
-                ? `https://api.pslink.world/api/plexus/hiringresume/update/${id}`
-                : 'https://api.pslink.world/api/plexus/hiringresume/create';
+                ? `http://localhost:5004/api/plexus/hiringresume/update/${id}`
+                : 'http://localhost:5004/api/plexus/hiringresume/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, submitData, {
@@ -521,6 +562,8 @@ const All = () => {
             resume: '',
             reference: '',
             experience: '',
+            experienceStartDate: '', // Add this
+            experienceEndDate: '',   // Add this
             status: 'all'
         });
         setId(null);
@@ -534,6 +577,13 @@ const All = () => {
         if (!isSubmitting) {
             const { date, time } = extractDateTime(item.interviewdate);
 
+            // Parse existing experience to extract dates if available
+            let startDate = '';
+            let endDate = '';
+
+            // You might need to store start/end dates in your API response
+            // For now, this assumes the API will be updated to include these fields
+
             setFormData({
                 name: item.name || '',
                 position: item.position || '',
@@ -544,6 +594,8 @@ const All = () => {
                 resume: item.resume || '',
                 reference: item.reference || '',
                 experience: item.experience || '',
+                experienceStartDate: item.experienceStartDate || '', // Add this
+                experienceEndDate: item.experienceEndDate || '',     // Add this
                 status: item.status || 'all'
             });
             setId(item._id);
@@ -559,7 +611,7 @@ const All = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this hiring record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`https://api.pslink.world/api/plexus/hiringresume/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5004/api/plexus/hiringresume/delete/${id}`);
                 toast.success(response.data.message || 'Hiring record deleted successfully!');
                 getData();
             } catch (err) {
@@ -1006,6 +1058,7 @@ const All = () => {
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Experience</TableCell>
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Reference</TableCell>
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Remark</TableCell>
+                                                    <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Add Date</TableCell>
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Resume</TableCell>
                                                     <TableCell isHeader className="py-7 font-medium text-gray-500 dark:text-gray-300 px-2 border-r border-gray-200 dark:border-gray-700">Actions</TableCell>
                                                 </TableRow>
@@ -1047,6 +1100,16 @@ const All = () => {
                                                                 <TableCell className="py-3 px-2 w-64 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                                     {item.remark ? item.remark : '-'}
                                                                 </TableCell>
+                                                                <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
+                                                                    {item.createdAt
+                                                                        ? new Date(item.createdAt).toLocaleDateString("en-GB", {
+                                                                            day: "2-digit",
+                                                                            month: "short",
+                                                                            year: "numeric",
+                                                                        })
+                                                                        : "-"}
+                                                                </TableCell>
+
                                                                 <TableCell className="py-3 px-2 border-r border-gray-200 dark:border-gray-700 dark:text-gray-200">
                                                                     {item.resume ? (
                                                                         <button
@@ -1247,25 +1310,63 @@ const All = () => {
                                     {/* Experience - Changed to text input */}
                                     <div className="mb-4">
                                         <label className="block font-medium mb-2">
-                                            Experience
+                                            Experience Start Date
                                             <span className="text-red-500 pl-2 font-normal text-lg">*</span>
                                         </label>
                                         <input
-                                            type="text"
-                                            name="experience"
-                                            value={formData.experience}
+                                            type="month"
+                                            name="experienceStartDate"
+                                            value={formData.experienceStartDate}
                                             onChange={handleInputChange}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200 ${errors.experience ? 'border-red-500' : 'border-gray-300'
+                                            max={formData.experienceEndDate || getCurrentMonth()}
+                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200 ${errors.experienceStartDate ? 'border-red-500' : 'border-gray-300'
                                                 }`}
-                                            placeholder="e.g., 1.5 year, 2 year, or Fresher"
+                                            placeholder="Select start month/year"
                                             disabled={isSubmitting}
                                         />
+                                        {/* {errors.experienceStartDate && (
+                                            <p className="text-red-500 text-sm mt-1">{errors.experienceStartDate}</p>
+                                        )} */}
+                                    </div>
+
+                                    {/* Experience End Date */}
+                                    <div className="mb-4">
+                                        <label className="block font-medium mb-2">
+                                            Experience End Date
+                                            <span className="text-red-500 pl-2 font-normal text-lg">*</span>
+                                        </label>
+                                        <input
+                                            type="month"
+                                            name="experienceEndDate"
+                                            value={formData.experienceEndDate}
+                                            onChange={handleInputChange}
+                                            min={formData.experienceStartDate}
+                                            max={getCurrentMonth()}
+                                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200 ${errors.experienceEndDate ? 'border-red-500' : 'border-gray-300'
+                                                }`}
+                                            placeholder="Select end month/year"
+                                            disabled={isSubmitting}
+                                        />
+                                        {/* {errors.experienceEndDate && (
+                                            <p className="text-red-500 text-sm mt-1">{errors.experienceEndDate}</p>
+                                        )} */}
+                                    </div>
+
+                                    {/* Calculated Experience Display */}
+                                    <div className="mb-4">
+                                        <label className="block font-medium mb-2">
+                                            Calculated Experience
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.experience}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
+                                            placeholder="Auto-calculated based on dates"
+                                            readOnly
+                                        />
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Enter experience in year (e.g., 0.5 year, 1.2 year, 3 year) or "Fresher"
+                                            Experience is automatically calculated based on start and end dates
                                         </p>
-                                        {errors.experience && (
-                                            <p className="text-red-500 text-sm mt-1">{errors.experience}</p>
-                                        )}
                                     </div>
 
                                     {/* Reference */}
