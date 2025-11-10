@@ -19,6 +19,7 @@ const Monthly = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedEvaluation, setSelectedEvaluation] = useState(null);
     const [editFormData, setEditFormData] = useState({
+        task: '',
         work: '',
         speed: '',
         time: '',
@@ -39,11 +40,26 @@ const Monthly = () => {
     ];
 
     const gradeLabels = {
+        task: { icon: faBriefcase, label: 'Task Complete', name: 'Vrushabh sir', color: 'text-blue-600' },
         work: { icon: faBriefcase, label: 'Work Performance', name: 'Vrushabh sir', color: 'text-blue-600' },
         speed: { icon: faBriefcase, label: 'Work Speed & Efficiency', name: 'Vrushabh sir', color: 'text-indigo-600' },
         leave: { icon: faCalendar, label: 'Leave Management', name: 'HR', color: 'text-green-600' },
         time: { icon: faClock, label: 'Time Management', name: 'HR', color: 'text-purple-600' },
         behaviour: { icon: faUserCheck, label: 'Behaviour & Attitude', name: 'HR', color: 'text-orange-600' }
+    };
+
+    // Helper function to determine which fields to show based on date
+    const getVisibleFields = (year, month) => {
+        const evalDate = new Date(year, parseInt(month) - 1, 1);
+        const cutoffDate = new Date(2025, 10, 1); // November 2025 (month is 0-indexed, so 10 = November)
+        
+        if (evalDate >= cutoffDate) {
+            // Nov 2025 onwards: show task, leave, time, behaviour
+            return ['task', 'leave', 'time', 'behaviour'];
+        } else {
+            // Before Nov 2025: show work, speed, leave, time, behaviour
+            return ['work', 'speed', 'leave', 'time', 'behaviour'];
+        }
     };
 
     const getGradeStyle = (grade) => {
@@ -66,28 +82,36 @@ const Monthly = () => {
                 )}
             </div>
             <div className="grid grid-cols-2 gap-2">
-                {gradeOptions.map(option => (
-                    <button
-                        key={option.value}
-                        type="button"
-                        disabled={disabled}
-                        onMouseDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onGradeChange(category, option.value);
-                        }}
-                        className={`p-3 rounded-xl border-2 transition-all duration-200 text-sm font-medium focus:outline-none
-        ${currentGrade === option.value
-                                ? `${option.color} text-white border-transparent`
-                                : `${option.bgColor} text-gray-700 border-gray-200 hover:border-gray-300`}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
-                        style={{ WebkitTapHighlightColor: 'transparent' }}
-                    >
-                        {option.label}
-                    </button>
+    {(category === 'task'
+        ? [
+            { value: 'A', label: 'A - Complete', points: 4.0, color: 'bg-green-500', bgColor: 'bg-green-50' },
+            { value: 'B', label: 'B - 75% Complete ', points: 3.0, color: 'bg-blue-500', bgColor: 'bg-blue-50' },
+            { value: 'C', label: 'C - Half Complete ', points: 2.0, color: 'bg-yellow-500', bgColor: 'bg-yellow-50' },
+            { value: 'D', label: 'D - Needs Improvement (Below 50%)', points: 1.0, color: 'bg-red-500', bgColor: 'bg-red-50' }
+        ]
+        : gradeOptions
+    ).map(option => (
+        <button
+            key={option.value}
+            type="button"
+            disabled={disabled}
+            onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onGradeChange(category, option.value);
+            }}
+            className={`p-3 rounded-xl border-2 transition-all duration-200 text-sm font-medium focus:outline-none
+                ${currentGrade === option.value
+                    ? `${option.color} text-white border-transparent`
+                    : `${option.bgColor} text-gray-700 border-gray-200 hover:border-gray-300`}
+                ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+            style={{ WebkitTapHighlightColor: 'transparent' }}
+        >
+            {option.label}
+        </button>
+    ))}
+</div>
 
-                ))}
-            </div>
         </div>
     );
 
@@ -148,6 +172,7 @@ const Monthly = () => {
                 setShowEditModal(false);
                 setSelectedEvaluation(null);
                 setEditFormData({
+                    task: '',
                     work: '',
                     speed: '',
                     time: '',
@@ -196,8 +221,8 @@ const Monthly = () => {
     };
 
     const isEvaluationComplete = (evaluation) => {
-        const requiredFields = ['work', 'speed', 'time', 'behaviour', 'leave'];
-        return requiredFields.every(field => evaluation[field] && evaluation[field] !== '');
+        const visibleFields = getVisibleFields(evaluation.year, evaluation.month);
+        return visibleFields.every(field => evaluation[field] && evaluation[field] !== '');
     };
 
     const processChartData = () => {
@@ -283,12 +308,13 @@ const Monthly = () => {
             if (evaluation) {
                 setSelectedEvaluation(evaluation);
                 setEditFormData({
+                    task: evaluation.task || '',
                     work: evaluation.work || '',
                     speed: evaluation.speed || '',
                     time: evaluation.time || '',
                     behaviour: evaluation.behaviour || '',
                     leave: evaluation.leave || '',
-                    notes: evaluation.notes || '' // Add this line
+                    notes: evaluation.notes || ''
                 });
                 setShowEditModal(true);
             } else {
@@ -330,47 +356,52 @@ const Monthly = () => {
         }
     };
 
-    const calculateOverallGrade = (grades) => {
-        console.log(grades);
-
-        const validGrades = Object.values(grades).filter(grade => grade !== '');
+    const calculateOverallGrade = (grades, year, month) => {
+        const visibleFields = getVisibleFields(year, month);
+        const validGrades = visibleFields
+            .map(field => grades[field])
+            .filter(grade => grade !== '');
+        
         if (validGrades.length === 0) return 'D';
 
-        const totalPoints = validGrades.reduce((sum, grade) => {
-            return sum + gradeToNumber(grade);
-        }, 0);
+        // ✅ Check if all grades are A
+        const allA = validGrades.every(grade => grade === 'A');
+        if (allA) return 'A';
 
+        // Calculate GPA normally
+        const totalPoints = validGrades.reduce((sum, grade) => sum + gradeToNumber(grade), 0);
         const gpa = totalPoints / validGrades.length;
 
-        if (gpa >= 3.5) return 'A';
-        else if (gpa >= 2.5) return 'B';
+        // Grade logic
+        if (gpa >= 2.5) return 'B';
         else if (gpa >= 1.5) return 'C';
-        else return 'D';
+        return 'D';
     };
+
 
     const handleUpdateEvaluation = async () => {
         if (!selectedEvaluation) return;
 
         try {
             const overallGrade = calculateOverallGrade({
+                task: editFormData.task,
                 work: editFormData.work,
                 speed: editFormData.speed,
                 time: editFormData.time,
                 behaviour: editFormData.behaviour,
                 leave: editFormData.leave
-            });
-
-            // console.log(overallGrade);
+            }, selectedEvaluation.year, selectedEvaluation.month);
 
             const updatePayload = {
                 grades: {
+                    task: editFormData.task,
                     work: editFormData.work,
                     speed: editFormData.speed,
                     time: editFormData.time,
                     behaviour: editFormData.behaviour,
                     leave: editFormData.leave
                 },
-                notes: editFormData.notes, // Add this line
+                notes: editFormData.notes,
                 overallGrade,
                 employeeName: selectedEvaluation.employeeName,
                 employeeId: selectedEvaluation.employeeId,
@@ -589,6 +620,7 @@ const Monthly = () => {
                 evaluations={evaluations}
                 gradeLabels={gradeLabels}
                 gradeOptions={gradeOptions}
+                getVisibleFields={getVisibleFields}
             />
         );
 
@@ -839,6 +871,13 @@ const Monthly = () => {
                             <div className="space-y-6">
                                 {Object.entries(editFormData).map(([field, value]) => {
                                     if (field === 'notes') return null; // Skip notes in the loop
+                                    
+                                    // Get visible fields for this evaluation
+                                    const visibleFields = getVisibleFields(selectedEvaluation.year, selectedEvaluation.month);
+                                    
+                                    // Only render if this field should be visible
+                                    if (!visibleFields.includes(field)) return null;
+                                    
                                     return (
                                         <GradeSelector
                                             key={field}
@@ -906,7 +945,7 @@ const Monthly = () => {
     );
 };
 
-const ReportPreview = ({ employeeName, month, year, evaluations, gradeLabels, gradeOptions }) => {
+const ReportPreview = ({ employeeName, month, year, evaluations, gradeLabels, gradeOptions, getVisibleFields }) => {
     const getMonthName = (monthNum) => {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return months[monthNum - 1];
@@ -964,9 +1003,11 @@ const ReportPreview = ({ employeeName, month, year, evaluations, gradeLabels, gr
 
     const previousMonths = getPreviousMonths();
 
-    // Prepare chart data for react-chartjs-2
-    const categories = Object.keys(gradeLabels);
+    // Get visible fields for current evaluation
+    const visibleFields = getVisibleFields(year, month);
+    const categories = visibleFields;
 
+    // Prepare chart data for react-chartjs-2
     const chartData = {
         labels: categories.map(cat => gradeLabels[cat].label),
         datasets: [
@@ -1044,7 +1085,7 @@ const ReportPreview = ({ employeeName, month, year, evaluations, gradeLabels, gr
         },
         scales: {
             y: {
-                beginAtZero: false, // start from 1 instead of 0
+                beginAtZero: false,
                 min: 1,
                 max: 4,
                 grid: {
@@ -1143,14 +1184,14 @@ const ReportPreview = ({ employeeName, month, year, evaluations, gradeLabels, gr
                         </div>
                     </div>
 
-                    {/* Grade Details Grid */}
+                    {/* Grade Details Grid - Only show visible fields */}
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(2, 1fr)',
                         gap: '16px',
                         marginBottom: '20px'
                     }}>
-                        {Object.entries(gradeLabels).map(([key, { label }]) => (
+                        {visibleFields.map((key) => (
                             <div key={key} style={{
                                 background: '#ffffff',
                                 padding: '16px',
@@ -1163,7 +1204,7 @@ const ReportPreview = ({ employeeName, month, year, evaluations, gradeLabels, gr
                                     marginBottom: '10px',
                                     fontWeight: '500'
                                 }}>
-                                    {label}
+                                    {gradeLabels[key].label}
                                 </div>
                                 <div style={{
                                     fontSize: '28px',
@@ -1246,7 +1287,5 @@ const ReportPreview = ({ employeeName, month, year, evaluations, gradeLabels, gr
         </div>
     );
 };
-
-
 
 export default Monthly;

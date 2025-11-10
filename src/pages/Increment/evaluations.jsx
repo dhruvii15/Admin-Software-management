@@ -44,8 +44,7 @@ const Evaluations = () => {
         month: defaultMonth,
         year: defaultYear,
         grades: {
-            work: '',
-            speed: '',
+            task: '',
             // overall: '',
             leave: '',
             time: '',
@@ -78,13 +77,22 @@ const Evaluations = () => {
         { value: 'D', label: 'D - Below Average (Below 24%)', points: 1.0, color: 'bg-red-500', bgColor: 'bg-red-50' }
     ];
 
+    const taskGradeOptions = [
+        { value: 'A', label: 'A - Complete', points: 4.0, color: 'bg-green-500', bgColor: 'bg-green-50' },
+        { value: 'B', label: 'B - 75% Complete', points: 3.0, color: 'bg-blue-500', bgColor: 'bg-blue-50' },
+        { value: 'C', label: 'C - Half Complete', points: 2.0, color: 'bg-yellow-500', bgColor: 'bg-yellow-50' },
+        { value: 'D', label: 'D - Needs Improvement (Below 50%)', points: 1.0, color: 'bg-red-500', bgColor: 'bg-red-50' },
+    ];
+
+
     const gradeLabels = {
-        work: { icon: faBriefcase, label: 'Work Performance', name : 'Vrushabh sir', color: 'text-blue-600' },
-        speed: { icon: faBriefcase, label: 'Work Speed & Efficiency',name : 'Vrushabh sir', color: 'text-indigo-600' },
+        task: { icon: faBriefcase, label: 'Task Complete', name: 'Vrushabh sir', color: 'text-blue-600' },
+        // work: { icon: faBriefcase, label: 'Work Performance', name : 'Vrushabh sir', color: 'text-blue-600' },
+        // speed: { icon: faBriefcase, label: 'Work Speed & Efficiency',name : 'Vrushabh sir', color: 'text-indigo-600' },
         // overall: { icon: faTarget, label: 'Overall Performance', color: 'text-emerald-600' },
-        leave: { icon: faCalendar, label: 'Leave Management', name : 'HR',color: 'text-green-600' },
-        time: { icon: faClock, label: 'Time Management', name : 'HR',color: 'text-purple-600' },
-        behaviour: { icon: faUserCheck, label: 'Behaviour & Attitude', name : 'HR',color: 'text-orange-600' }
+        leave: { icon: faCalendar, label: 'Leave Management', name: 'HR', color: 'text-green-600' },
+        time: { icon: faClock, label: 'Time Management', name: 'HR', color: 'text-purple-600' },
+        behaviour: { icon: faUserCheck, label: 'Behaviour & Attitude', name: 'HR', color: 'text-orange-600' }
     };
 
     useEffect(() => {
@@ -246,10 +254,14 @@ const Evaluations = () => {
 
         const gpa = (totalPoints / grades.length).toFixed(2);
 
-        if (gpa >= 3.5) return { grade: 'A', gpa };
+        // ✅ If all grades are 'A', overall grade is 'A'
+        const allA = grades.every(grade => grade === 'A');
+        if (allA) return { grade: 'A', gpa };
+
+        // Otherwise, determine based on GPA
         if (gpa >= 2.5) return { grade: 'B', gpa };
         if (gpa >= 1.5) return { grade: 'C', gpa };
-        return { grade: 'D', gpa };
+        return { grade: 'D', gpa }
     };
 
     const getGradeStyle = (grade) => {
@@ -316,6 +328,9 @@ const Evaluations = () => {
         try {
             const overallResult = calculateOverallGrade();
 
+            console.log(overallResult);
+
+
             // Prepare evaluation data
             const evaluationPayload = {
                 ...evaluationData,
@@ -347,7 +362,7 @@ const Evaluations = () => {
                     employeeName: '',
                     month: resetMonth,
                     year: resetYear,
-                    grades: { work: '', speed: '', leave: '', time: '', behaviour: '' },
+                    grades: { task: '', leave: '', time: '', behaviour: '' },
                     notes: ''
                 });
 
@@ -381,31 +396,18 @@ const Evaluations = () => {
                 )}
             </div>
             <div className="grid grid-cols-2 gap-2">
-                {gradeOptions.map(option => (
+                {(category === 'task' ? taskGradeOptions : gradeOptions).map(option => (
                     <button
                         key={option.value}
                         type="button"
                         disabled={disabled}
                         onClick={(e) => {
-                            // Prevent all default behaviors and scrolling
                             e.preventDefault();
                             e.stopPropagation();
-
-                            // Store current scroll position
                             const currentScrollY = window.scrollY;
-
-                            // Update the grade
                             onGradeChange(category, option.value);
-
-                            // Restore scroll position immediately after state update
-                            requestAnimationFrame(() => {
-                                window.scrollTo(0, currentScrollY);
-                            });
-
-                            // Additional fallback to maintain scroll position
-                            setTimeout(() => {
-                                window.scrollTo(0, currentScrollY);
-                            }, 0);
+                            requestAnimationFrame(() => window.scrollTo(0, currentScrollY));
+                            setTimeout(() => window.scrollTo(0, currentScrollY), 0);
                         }}
                         className={`p-3 rounded-xl border-2 transition-all duration-200 text-sm font-medium focus:outline-none ${currentGrade === option.value
                             ? `${option.color} text-white border-transparent`
