@@ -151,8 +151,51 @@ const All = () => {
         };
     }, [isOpen2, showExperienceDropdown, showSuggestions, showDatePicker]);
 
+    useEffect(() => {
+    // Push state when modal opens
+    if (visible) {
+        window.history.pushState({ modalOpen: true }, '');
+    }
+    
+    // Handle popstate (back button)
+    const handlePopState = (event) => {
+        if (visible) {
+            setVisible(false);
+            setErrors({});
+            setFormData({
+                name: '',
+                position: selectedPosition || '',
+                phonenumber: '',
+                interviewdate: '',
+                interviewtime: '',
+                remark: '',
+                resume: '',
+                reference: '',
+                experience: '',
+                experienceStartDate: '',
+                experienceEndDate: '',
+                status: 'all'
+            });
+            setId(undefined);
+            setSelectedFileName('');
+            setShowPositionInput(false);
+        }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+        window.removeEventListener('popstate', handlePopState);
+    };
+}, [visible, selectedPosition]);
+
     const toggleModal = (mode) => {
-        if (!isSubmitting) {
+    if (!isSubmitting) {
+        if (visible) {
+            // If closing, go back in history
+            window.history.back();
+        } else {
+            // If opening, state will be pushed by useEffect
             if (mode === 'add') {
                 setFormData({
                     name: '',
@@ -164,8 +207,8 @@ const All = () => {
                     resume: '',
                     reference: '',
                     experience: '',
-                    experienceStartDate: '', // Add this
-                    experienceEndDate: '',   // Add this
+                    experienceStartDate: '',
+                    experienceEndDate: '',
                     status: 'all'
                 });
                 setId(undefined);
@@ -175,7 +218,8 @@ const All = () => {
             setErrors({});
             setVisible(!visible);
         }
-    };
+    }
+};
 
     const handleBackToDashboard = () => {
         navigate('/management/hiring/data');

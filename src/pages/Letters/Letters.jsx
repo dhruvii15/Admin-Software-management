@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -900,6 +900,9 @@ const Letters = () => {
         } else if (selectedLetter.id === 'offer') {
             generatePDFInternship3();
         }
+
+        // Close modal after PDF generation
+        closeModal();
     };
 
     const formatDate = (inputDate) => {
@@ -932,11 +935,41 @@ const Letters = () => {
     };
 
     const closeModal = () => {
-        setShowModal(false);
-        setSelectedLetter(null);
-        setFormData({});
-        setErrors({}); // Clear errors when closing modal
+        if (showModal) {
+            // If closing, go back in history
+            window.history.back();
+        } else {
+            setShowModal(false);
+            setSelectedLetter(null);
+            setFormData({});
+            setErrors({});
+            setFormattedData({});
+        }
     };
+
+    useEffect(() => {
+        // Push state when modal opens
+        if (showModal) {
+            window.history.pushState({ modalOpen: true }, '');
+        }
+
+        // Handle popstate (back button)
+        const handlePopState = (event) => {
+            if (showModal) {
+                setShowModal(false);
+                setSelectedLetter(null);
+                setFormData({});
+                setErrors({});
+                setFormattedData({});
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [showModal]);
 
     return (
         <div className="min-h-screen bg-gray-50">

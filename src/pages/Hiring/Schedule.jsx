@@ -155,8 +155,53 @@ const Schedule = () => {
         };
     }, [isOpen2, showExperienceDropdown, showSuggestions, showDatePicker]);
 
-    const toggleModal = (mode) => {
-        if (!isSubmitting) {
+    // Add this useEffect after your existing useEffect hooks (around line 125-170)
+useEffect(() => {
+    // Push state when modal opens
+    if (visible) {
+        window.history.pushState({ modalOpen: true }, '');
+    }
+    
+    // Handle popstate (back button)
+    const handlePopState = (event) => {
+        if (visible) {
+            setVisible(false);
+            setErrors({});
+            setFormData({
+                name: '',
+                position: selectedPosition || '',
+                phonenumber: '',
+                interviewdate: '',
+                interviewtime: '',
+                remark: '',
+                resume: '',
+                reference: '',
+                experience: '',
+                experienceStartDate: '',
+                experienceEndDate: '',
+                status: 'all'
+            });
+            setId(undefined);
+            setSelectedFileName('');
+            setShowPositionInput(false);
+        }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+        window.removeEventListener('popstate', handlePopState);
+    };
+}, [visible, selectedPosition]);
+
+// Update the toggleModal function (around line 172)
+const toggleModal = (mode) => {
+    if (!isSubmitting) {
+        if (visible) {
+            // If closing, go back in history
+            window.history.back();
+        } else {
+            // If opening, state will be pushed by useEffect
             if (mode === 'add') {
                 setFormData({
                     name: '',
@@ -168,8 +213,8 @@ const Schedule = () => {
                     resume: '',
                     reference: '',
                     experience: '',
-                    experienceStartDate: '', // Add this
-                    experienceEndDate: '',   // Add this
+                    experienceStartDate: '',
+                    experienceEndDate: '',
                     status: 'all'
                 });
                 setId(undefined);
@@ -179,7 +224,8 @@ const Schedule = () => {
             setErrors({});
             setVisible(!visible);
         }
-    };
+    }
+};
 
     const handleBackToDashboard = () => {
         navigate('/management/hiring/data');

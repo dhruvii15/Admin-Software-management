@@ -38,13 +38,13 @@ const Monthly = () => {
         { value: 'D', label: 'D - Below Average (Below 24%)', points: 1.0, color: 'bg-red-500', bgColor: 'bg-red-50' }
     ];
 
-     const gradeLabels = {
-            work: { icon: faBriefcase, label: 'Work Performance', name : 'Vrushabh sir', color: 'text-blue-600' },
-            speed: { icon: faBriefcase, label: 'Work Speed & Efficiency',name : 'Vrushabh sir', color: 'text-indigo-600' },
-            leave: { icon: faCalendar, label: 'Leave Management', name : 'HR',color: 'text-green-600' },
-            time: { icon: faClock, label: 'Time Management', name : 'HR',color: 'text-purple-600' },
-            behaviour: { icon: faUserCheck, label: 'Behaviour & Attitude', name : 'HR',color: 'text-orange-600' }
-        };
+    const gradeLabels = {
+        work: { icon: faBriefcase, label: 'Work Performance', name: 'Vrushabh sir', color: 'text-blue-600' },
+        speed: { icon: faBriefcase, label: 'Work Speed & Efficiency', name: 'Vrushabh sir', color: 'text-indigo-600' },
+        leave: { icon: faCalendar, label: 'Leave Management', name: 'HR', color: 'text-green-600' },
+        time: { icon: faClock, label: 'Time Management', name: 'HR', color: 'text-purple-600' },
+        behaviour: { icon: faUserCheck, label: 'Behaviour & Attitude', name: 'HR', color: 'text-orange-600' }
+    };
 
     const getGradeStyle = (grade) => {
         const gradeData = gradeOptions.find(opt => opt.value === grade);
@@ -56,9 +56,9 @@ const Monthly = () => {
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                                    <FontAwesomeIcon icon={gradeLabels[category].icon} className={`${gradeLabels[category].color} w-5 h-5 mr-2`} />
-                                    <h3 className="text-md font-semibold text-gray-800">{gradeLabels[category].label} <span className="text-gray-400 font-normal">({gradeLabels[category].name})</span></h3>
-                                </div>
+                    <FontAwesomeIcon icon={gradeLabels[category].icon} className={`${gradeLabels[category].color} w-5 h-5 mr-2`} />
+                    <h3 className="text-md font-semibold text-gray-800">{gradeLabels[category].label} <span className="text-gray-400 font-normal">({gradeLabels[category].name})</span></h3>
+                </div>
                 {currentGrade && (
                     <span className={`px-3 py-1 rounded-full text-sm font-bold text-white ${getGradeStyle(currentGrade).color}`}>
                         {currentGrade}
@@ -135,6 +135,35 @@ const Monthly = () => {
             scrollPositionRef.current = 0;
         }
     }, [editFormData]);
+
+    useEffect(() => {
+        // Push state when modal opens
+        if (showEditModal) {
+            window.history.pushState({ modalOpen: true }, '');
+        }
+
+        // Handle popstate (back button)
+        const handlePopState = (event) => {
+            if (showEditModal) {
+                setShowEditModal(false);
+                setSelectedEvaluation(null);
+                setEditFormData({
+                    work: '',
+                    speed: '',
+                    time: '',
+                    behaviour: '',
+                    leave: '',
+                    notes: ''
+                });
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [showEditModal]);
 
     const fetchData = async () => {
         try {

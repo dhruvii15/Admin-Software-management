@@ -41,21 +41,56 @@ const Leave = () => {
         };
     }, [isOpen2]);
 
-    const toggleModal = (mode) => {
-        if (!isSubmitting) {
-            if (mode === 'add') {
-                setFormData({
-                    name: '',
-                    startDate: '',
-                    endDate: '',
-                    reason: ''
-                });
-                setId(undefined);
-            }
+    useEffect(() => {
+    // Push state when modal opens
+    if (visible) {
+        window.history.pushState({ modalOpen: true }, '');
+    }
+
+    // Handle popstate (back button)
+    const handlePopState = (event) => {
+        if (visible) {
+            setVisible(false);
             setErrors({});
-            setVisible(!visible);
+            setFormData({
+                name: '',
+                startDate: '',
+                endDate: '',
+                reason: ''
+            });
+            setId(null);
         }
     };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+        window.removeEventListener('popstate', handlePopState);
+    };
+}, [visible]);
+
+    const toggleModal = (mode) => {
+    if (!isSubmitting) {
+        if (mode === 'add') {
+            setFormData({
+                name: '',
+                startDate: '',
+                endDate: '',
+                reason: ''
+            });
+            setId(undefined);
+        }
+        setErrors({});
+        
+        if (visible) {
+            // If closing, go back in history
+            window.history.back();
+        } else {
+            // If opening, state will be pushed by useEffect
+            setVisible(!visible);
+        }
+    }
+};
 
     // API calls for leave management
     const getData = async (page = 1) => {
@@ -153,16 +188,22 @@ const Leave = () => {
     };
 
     const resetForm = () => {
-        setFormData({
-            name: '',
-            startDate: '',
-            endDate: '',
-            reason: ''
-        });
-        setId(null);
-        setErrors({});
+    setFormData({
+        name: '',
+        startDate: '',
+        endDate: '',
+        reason: ''
+    });
+    setId(null);
+    setErrors({});
+    
+    // Close modal with back button handling
+    if (visible) {
+        window.history.back();
+    } else {
         setVisible(false);
-    };
+    }
+};
 
     const handleEdit = (leave) => {
         if (!isSubmitting) {

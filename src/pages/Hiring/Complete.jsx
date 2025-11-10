@@ -394,9 +394,17 @@ const Complete = () => {
         };
     }, [isOpen2, showExperienceDropdown, showSuggestions, showDatePicker]);
 
-    const toggleModal = (mode) => {
-        if (!isSubmitting) {
-            if (mode === 'add') {
+    useEffect(() => {
+        // Push state when modal opens
+        if (visible) {
+            window.history.pushState({ modalOpen: true }, '');
+        }
+
+        // Handle popstate (back button)
+        const handlePopState = (event) => {
+            if (visible) {
+                setVisible(false);
+                setErrors({});
                 setFormData({
                     name: '',
                     position: selectedPosition || '',
@@ -408,17 +416,78 @@ const Complete = () => {
                     resume: '',
                     reference: '',
                     experience: '',
-                    experienceStartDate: '', // Add this
-                    experienceEndDate: '', 
+                    experienceStartDate: '',
+                    experienceEndDate: '',
                     status: 'all',
-                    bond: false // Add this line
+                    bond: false
                 });
                 setId(undefined);
                 setSelectedFileName('');
                 setShowPositionInput(false);
             }
-            setErrors({});
-            setVisible(!visible);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [visible, selectedPosition]);
+
+    // Handle back button for status update modal
+    useEffect(() => {
+        // Push state when status modal opens
+        if (showStatusModal) {
+            window.history.pushState({ statusModalOpen: true }, '');
+        }
+
+        // Handle popstate (back button)
+        const handlePopState = (event) => {
+            if (showStatusModal) {
+                setShowStatusModal(false);
+                setSelectedItemForStatus(null);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [showStatusModal]);
+
+    // Update the toggleModal function (around line 295)
+    const toggleModal = (mode) => {
+        if (!isSubmitting) {
+            if (visible) {
+                // If closing, go back in history
+                window.history.back();
+            } else {
+                // If opening, state will be pushed by useEffect
+                if (mode === 'add') {
+                    setFormData({
+                        name: '',
+                        position: selectedPosition || '',
+                        phonenumber: '',
+                        interviewdate: '',
+                        interviewtime: '',
+                        remark: '',
+                        expectation: '',
+                        resume: '',
+                        reference: '',
+                        experience: '',
+                        experienceStartDate: '',
+                        experienceEndDate: '',
+                        status: 'all',
+                        bond: false
+                    });
+                    setId(undefined);
+                    setSelectedFileName('');
+                    setShowPositionInput(false);
+                }
+                setErrors({});
+                setVisible(!visible);
+            }
         }
     };
 
@@ -771,7 +840,7 @@ const Complete = () => {
             reference: '',
             experience: '',
             experienceStartDate: '', // Add this
-            experienceEndDate: '', 
+            experienceEndDate: '',
             status: 'all',
             bond: false // Add this line
         });
