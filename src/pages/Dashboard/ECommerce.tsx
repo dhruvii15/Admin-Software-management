@@ -87,7 +87,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('http://localhost:5004/api/plexus/hiringresume/read');
+      const response = await fetch('http://localhost:5005/api/plexus/hiringresume/read');
       const data = await response.json();
 
       const tomorrow = new Date();
@@ -143,7 +143,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('http://localhost:5004/api/plexus/leave/read');
+      const response = await fetch('http://localhost:5005/api/plexus/leave/read');
       const data = await response.json();
 
       const tomorrow = new Date();
@@ -187,7 +187,7 @@ export default function Ecommerce() {
         return;
       }
 
-      const response = await fetch('http://localhost:5004/api/plexus/evaluations/read');
+      const response = await fetch('http://localhost:5005/api/plexus/evaluations/read');
       const data = await response.json();
 
       const currentDate = new Date();
@@ -273,7 +273,7 @@ export default function Ecommerce() {
 
 
     //   // Call delete API with array of IDs
-    //   const response = await axios.delete(`http://localhost:5004/api/plexus/leave/multy`, {
+    //   const response = await axios.delete(`http://localhost:5005/api/plexus/leave/multy`, {
     //     data: { ids: leaveIds }
     //   });
 

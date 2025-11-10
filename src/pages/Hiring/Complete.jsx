@@ -156,7 +156,7 @@ const Complete = () => {
             setIsSubmitting(true);
 
             const response = await axios.patch(
-                `http://localhost:5004/api/plexus/hiringresume/update/${itemId}`,
+                `http://localhost:5005/api/plexus/hiringresume/update/${itemId}`,
                 { completestatus: newStatus },
                 {
                     headers: {
@@ -518,7 +518,7 @@ const Complete = () => {
     const getData = useCallback(async (page = 1) => {
         try {
             setLoading(true);
-            const response = await axios.get('http://localhost:5004/api/plexus/hiringresume/read');
+            const response = await axios.get('http://localhost:5005/api/plexus/hiringresume/read');
             const data = response.data.data;
 
             setOriginalData(data);
@@ -737,8 +737,8 @@ const Complete = () => {
             }
 
             const endpoint = id
-                ? `http://localhost:5004/api/plexus/hiringresume/update/${id}`
-                : 'http://localhost:5004/api/plexus/hiringresume/create';
+                ? `http://localhost:5005/api/plexus/hiringresume/update/${id}`
+                : 'http://localhost:5005/api/plexus/hiringresume/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, submitData, {
@@ -824,7 +824,7 @@ const Complete = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this hiring record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`http://localhost:5004/api/plexus/hiringresume/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5005/api/plexus/hiringresume/delete/${id}`);
                 toast.success(response.data.message || 'Hiring record deleted successfully!');
                 getData();
             } catch (err) {

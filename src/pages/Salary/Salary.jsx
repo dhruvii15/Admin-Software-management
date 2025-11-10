@@ -37,7 +37,9 @@ const Salary = () => {
     // New state for employee editing
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [employeeRemark, setEmployeeRemark] = useState("");
+    const [employeeBonus, setEmployeeBonus] = useState("");
     const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false);
+    const [isUpdatingEmployee2, setIsUpdatingEmployee2] = useState(false);
 
     // Add ref for calculation modal
     const calculationModalRef = useRef(null);
@@ -138,6 +140,45 @@ const Salary = () => {
         };
     }, [showCalculationModal]);
 
+
+    useEffect(() => {
+        // Push state when any modal opens
+        if (visible || isOpen || showCalculationModal) {
+            window.history.pushState({ modalOpen: true }, '');
+        }
+
+        // Handle popstate (back button)
+        const handlePopState = (event) => {
+            if (visible) {
+                setVisible(false);
+                setErrors({});
+                setFormData({
+                    month: '',
+                    year: '',
+                    pdf: null
+                });
+                setSelectedFileName("");
+                setCurrentFileName("");
+            }
+            if (isOpen) {
+                setIsOpen(false);
+                setSalaryData([]);
+                setEditingEmployee(null);
+                setEmployeeRemark("");
+                setEmployeeBonus("");
+            }
+            if (showCalculationModal) {
+                setShowCalculationModal(false);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [visible, isOpen, showCalculationModal]);
+
     // Function to handle year selection - UPDATED to maintain sort order
     const handleYearSelection = (year) => {
         setSelectedYear(year);
@@ -192,7 +233,14 @@ const Salary = () => {
                 setCurrentFileName("");
             }
             setErrors({});
-            setVisible(!visible);
+
+            if (visible) {
+                // If closing, go back in history
+                window.history.back();
+            } else {
+                // If opening, state will be pushed by useEffect
+                setVisible(!visible);
+            }
         }
     };
 
@@ -201,7 +249,7 @@ const Salary = () => {
         try {
             setLoading(true);
             // Replace with your salary API endpoint
-            const response = await axios.get('http://localhost:5004/api/plexus/employee/salary/read');
+            const response = await axios.get('http://localhost:5005/api/plexus/employee/salary/read');
             const data = response.data.data;
 
             // Sort the data in descending order (latest first)
@@ -341,8 +389,8 @@ const Salary = () => {
 
             // Replace with your salary API endpoints
             const endpoint = id
-                ? `http://localhost:5004/api/plexus/employee/salary/update/${id}`
-                : 'http://localhost:5004/api/plexus/employee/salary/create';
+                ? `http://localhost:5005/api/plexus/employee/salary/update/${id}`
+                : 'http://localhost:5005/api/plexus/employee/salary/create';
             const method = id ? 'patch' : 'post';
 
             const response = await axios[method](endpoint, formDataToSend, {
@@ -397,7 +445,7 @@ const Salary = () => {
         if (!isSubmitting && window.confirm("Are you sure you want to delete this salary record?")) {
             try {
                 setIsSubmitting(true);
-                const response = await axios.delete(`http://localhost:5004/api/plexus/employee/salary/delete/${id}`);
+                const response = await axios.delete(`http://localhost:5005/api/plexus/employee/salary/delete/${id}`);
                 toast.success(response.data.message || 'Salary deleted successfully!');
                 getData();
             } catch (err) {
@@ -414,7 +462,7 @@ const Salary = () => {
             try {
                 setCompletingIds(prev => new Set(prev).add(salaryId));
                 const response = await axios.patch(
-                    `http://localhost:5004/api/plexus/employee/salary/update/${salaryId}`,
+                    `http://localhost:5005/api/plexus/employee/salary/update/${salaryId}`,
                     { completed: true }
                 );
                 toast.success(response.data.message || 'Salary marked as completed!');
@@ -456,6 +504,7 @@ const Salary = () => {
     const handleEmployeeEdit = (employee) => {
         setEditingEmployee(employee._id);
         setEmployeeRemark(employee.remark || "");
+        setEmployeeBonus(employee.bonus || "");
     };
 
     const handleEmployeeUpdate = async (employeename) => {
@@ -463,7 +512,7 @@ const Salary = () => {
             setIsUpdatingEmployee(true);
 
             // Call update API
-            const response = await axios.patch(`http://localhost:5004/api/plexus/employee/salary/update/${id}`, {
+            const response = await axios.patch(`http://localhost:5005/api/plexus/employee/salary/update/${id}`, {
                 remark: employeeRemark,
                 name: employeename
             });
@@ -489,18 +538,51 @@ const Salary = () => {
         }
     };
 
+    const handleEmployeeBonusUpdate = async (employeename) => {
+        try {
+            setIsUpdatingEmployee2(true);
+
+            // Call update API
+            const response = await axios.patch(`http://localhost:5005/api/plexus/employee/salary/update/${id}`, {
+                bonus: employeeBonus,
+                name: employeename
+            });
+
+            toast.success(response.data.message || 'Employee bonus updated successfully!');
+
+            // Update the local salaryData state to reflect changes immediately
+            setSalaryData(prevData =>
+                prevData.map(emp =>
+                    emp.name === employeename
+                        ? { ...emp, bonus: employeeBonus }
+                        : emp
+                )
+            );
+
+            setEditingEmployee(null);
+            setEmployeeBonus("");
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Failed to update employee bonus.");
+        } finally {
+            setIsUpdatingEmployee2(false);
+        }
+    };
+
     const handleCancelEdit = () => {
         setEditingEmployee(null);
         setEmployeeRemark("");
+        setEmployeeBonus("");
     };
 
     // UPDATED CSV export to include total pay salary amount
     const exportToCSV = () => {
-        const headers = ['Name', 'Present Days', 'Absent Days', 'Weekly Off', 'Total Days', 'Total Salary', 'Pay Salary', 'Cut Salary', 'Remark'];
+        const headers = ['Name', 'Present Days', 'Absent Days', 'Weekly Off', 'Total Days', 'Bonus', 'Total Salary', 'Pay Salary', 'Cut Salary', 'Remark'];
 
-        // Calculate total pay salary
-        const totalPaySalary = salaryData.reduce((sum, emp) => sum + (emp.paySalary || 0), 0);
+        // Calculate total pay salary with bonus
+        const totalPaySalary = salaryData.reduce((sum, emp) => sum + (emp.paySalary || 0) + (parseFloat(emp.bonus) || 0), 0);
         const totalSalaryAmount = salaryData.reduce((sum, emp) => sum + (emp.totalSalary || 0), 0);
+        const totalBonus = salaryData.reduce((sum, emp) => sum + (parseFloat(emp.bonus) || 0), 0);
 
         const csvContent = [
             headers.join(','),
@@ -510,13 +592,14 @@ const Salary = () => {
                 row.absent,
                 row.weeklyOff,
                 row.totalDays,
+                row.bonus || 0,
                 row.totalSalary,
-                row.paySalary,
+                Math.round((row.paySalary || 0) + (parseFloat(row.bonus) || 0)),
                 row.cutSalary,
-                `"${row.remark || ''}"`
+                `"${row.remark || ''}"`,
             ].join(',')),
             // Add totals row
-            ['TOTALS', '', '', '', '', Math.round(totalSalaryAmount), Math.round(totalPaySalary), '', ''].join(',')
+            ['TOTALS', '', '', '', '', Math.round(totalBonus), Math.round(totalSalaryAmount), Math.round(totalPaySalary), '', ''].join(',')
         ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1125,6 +1208,9 @@ const Salary = () => {
                                             <i className="fas fa-calendar mr-2"></i>Total Days
                                         </th>
                                         <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-200 border-b border-gray-200">
+                                            <i className="fas fa-gift mr-2 text-yellow-600"></i>Bonus
+                                        </th>
+                                        <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-200 border-b border-gray-200">
                                             <i className="fas fa-check-circle mr-2 text-green-600"></i>Present
                                         </th>
                                         <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-200 border-b border-gray-200">
@@ -1149,7 +1235,14 @@ const Salary = () => {
                                 </thead>
                                 <tbody>
                                     {salaryData.map((employee, index) => (
-                                        <tr key={employee._id} className={`hover:bg-gray-50 transition-colors dark:bg-gray-800 dark:text-gray-200 duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
+                                        <tr
+                                            key={employee._id}
+                                            className={`transition-colors duration-150
+            dark:bg-gray-800 dark:text-gray-200
+            ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}
+            ${employee.bonus > 0 ? 'bg-blue-400/20 dark:bg-green-900/30' : ''}
+        `}
+                                        >
                                             <td className="px-6 py-4 border-b border-gray-200">
                                                 <div className="flex items-center">
                                                     <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-3">
@@ -1164,6 +1257,61 @@ const Salary = () => {
                                                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-200">
                                                     {employee.totalDays}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center border-b border-gray-200">
+                                                {editingEmployee === employee._id ? (
+                                                    <div className="flex items-center gap-2 justify-center">
+                                                        <input
+                                                            type="number"
+                                                            value={employeeBonus}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                if (value < 0) return;
+                                                                setEmployeeBonus(value === "" ? 0 : Number(value));
+                                                            }}
+                                                            placeholder="0"
+                                                            min="0"
+                                                            className="w-20 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-center"
+                                                            disabled={isUpdatingEmployee2}
+                                                        />
+                                                        <div className="flex flex-col gap-1">
+                                                            <button
+                                                                onClick={() => handleEmployeeBonusUpdate(employee.name)}
+                                                                disabled={isUpdatingEmployee2}
+                                                                className="text-green-600 hover:text-green-800 transition-colors p-1"
+                                                                title="Save bonus"
+                                                            >
+                                                                {isUpdatingEmployee2 ? (
+                                                                    <div className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                                                ) : (
+                                                                    <FontAwesomeIcon icon={faCheck} className="text-sm" />
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                onClick={handleCancelEdit}
+                                                                disabled={isUpdatingEmployee2}
+                                                                className="text-red-600 hover:text-red-800 transition-colors p-1"
+                                                                title="Cancel"
+                                                            >
+                                                                <FontAwesomeIcon icon={faTimes} className="text-sm" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                                            <i className="fas fa-rupee-sign mr-1"></i>
+                                                            {employee.bonus || 0}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleEmployeeEdit(employee)}
+                                                            className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                                                            title="Edit bonus"
+                                                        >
+                                                            <FontAwesomeIcon icon={faEdit} className="text-sm" />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-center border-b border-gray-200">
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -1213,7 +1361,7 @@ const Salary = () => {
                                             <td className="px-6 py-4 text-center border-b border-gray-200">
                                                 <span className="text-sm font-semibold text-green-600">
                                                     <i className="fas fa-rupee-sign mr-1"></i>
-                                                    {Math.round(employee.paySalary)}
+                                                    {Math.round((employee.paySalary || 0) + (parseFloat(employee.bonus) || 0))}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center border-b border-gray-200">
@@ -1277,36 +1425,30 @@ const Salary = () => {
                                                 </div>
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200"></td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
-
+                                            <span className="text-sm font-bold text-yellow-600">
+                                                <i className="fas fa-rupee-sign mr-1"></i>
+                                                {Math.round(salaryData.reduce((sum, emp) => sum + (parseFloat(emp.bonus) || 0), 0))}
+                                            </span>
                                         </td>
-                                        <td className="px-6 py-4 text-center border-b border-gray-200">
-
-                                        </td>
-                                        <td className="px-6 py-4 text-center border-b border-gray-200">
-
-                                        </td>
-                                        <td className="px-6 py-4 text-center border-b border-gray-200">
-
-                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200"></td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200"></td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200"></td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
                                             <span className="text-sm font-bold text-gray-900 dark:text-gray-200">
                                                 <i className="fas fa-rupee-sign mr-1"></i>
                                                 {Math.round(salaryData.reduce((sum, emp) => sum + (emp.totalSalary || 0), 0))}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-center border-b border-gray-200">
-
-                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200"></td>
                                         <td className="px-6 py-4 text-center border-b border-gray-200">
                                             <span className="text-sm font-bold text-green-600">
                                                 <i className="fas fa-rupee-sign mr-1"></i>
-                                                {Math.round(salaryData.reduce((sum, emp) => sum + (emp.paySalary || 0), 0))}
+                                                {Math.round(salaryData.reduce((sum, emp) => sum + (emp.paySalary || 0) + (parseFloat(emp.bonus) || 0), 0))}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-center border-b border-gray-200">
-
-                                        </td>
+                                        <td className="px-6 py-4 text-center border-b border-gray-200"></td>
                                     </tr>
                                 </tbody>
                             </table>
